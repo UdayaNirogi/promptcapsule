@@ -1,6 +1,7 @@
 # PromptCapsule 📦
 
-> Lossless prompt capsules for sharing, retrieval, and agent-to-agent handoff.
+> Lossless prompt capsules for sharing, retrieval, and agent-to-agent handoff
+> (v0.1.4 — fail-closed integrity, size limits, vault & Gist hardening).
 
 ![PromptCapsule Infographic](assets/promptcapsule_infographic.png)
 
@@ -48,7 +49,7 @@ result = pc.decompress(capsule, vault_backend=vault)  # strict=True by default
 - **Vault** (`cap_v_…`): both agents use the same backend (SQLite, GitHub Gist, or S3). The long prompt stays in the vault; only a short key moves between agents.
 - Use `strict=False` only if you intentionally want plaintext with `verified=False` (legacy).
 
-This is a use of the existing API, not a separate agent protocol, and not encryption. The project includes **27+ automated test cases** (plus security regressions) — that number is test coverage, not capsule length.
+This is a use of the existing API, not a separate agent protocol, and not encryption. The project includes **81 automated tests** (core + security regressions). The number **27+** historically referred to core unit tests — it is **test coverage**, not capsule length.
 
 ---
 
@@ -94,14 +95,16 @@ print(pc.MAX_DECOMPRESSED_SIZE)  # 10485760
 
 | Issue | Status | Mitigation |
 |-------|--------|------------|
-| Integrity fail-open (plaintext returned when checksum fails) | **Fixed** | `decompress(strict=True)` default raises `IntegrityError` |
-| Empty checksum prefix → `verified=True` (`startswith("")`) | **Fixed** | Require exactly 8 lowercase hex chars |
-| zlib bomb / unbounded decompress | **Fixed** | Bounded decompress (3.11+ `max_length` or `decompressobj`) |
-| Huge compress DoS | **Fixed** | `MAX_PROMPT_SIZE` enforced |
-| Predictable vault keys (`mem_00000001`, …) | **Fixed** | Cryptographic random keys |
-| Vault key swap returning another agent’s text | **Hardened** | Fail-closed + key↔stored-checksum binding |
-| S3 key from capsule (confused deputy) | **Hardened** | Refuse keys outside configured `prefix` |
-| HMAC helper `NameError` | **Fixed** | `hmac` imported for `verify_signature` |
+| Integrity fail-open (plaintext when checksum fails) | **Fixed** (0.1.2+) | `decompress(strict=True)` raises `IntegrityError` |
+| Empty checksum prefix → `verified=True` | **Fixed** | Exactly 8 lowercase hex chars required |
+| zlib bomb / unbounded decompress | **Fixed** | Cap at **10 MiB** expansion |
+| Huge compress DoS | **Fixed** | `MAX_PROMPT_SIZE` = **10 MiB** |
+| Predictable vault keys | **Fixed** | `secrets.token_urlsafe` keys |
+| Vault key swap → other agent’s text | **Fixed** (0.1.4) | Fail-closed + bind; `strict=False` returns **empty text** |
+| Trailing Base85 junk (`_EXTRA`) | **Fixed** (0.1.4) | Round-trip encode check |
+| S3 confused-deputy keys | **Fixed** | Prefix + `..` guard |
+| Gist capsule-controlled IDs | **Fixed** (0.1.4) | `require_owner=True` + optional allowlist |
+| HMAC helper `NameError` | **Fixed** | Module-level `hmac` |
 
 ### Remaining limitations (read carefully)
 

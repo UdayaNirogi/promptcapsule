@@ -80,12 +80,12 @@ def slide_title(prs):
     add_textbox(slide, Inches(0.8), Inches(2.0), Inches(11), Inches(1),
                 "PromptCapsule", size=48, bold=True, color=WHITE)
     add_textbox(slide, Inches(0.8), Inches(3.0), Inches(11), Inches(0.8),
-                "Lossless Prompt Packaging & Retrieval", size=26, color=ACCENT)
+                "Lossless Prompt Packaging & Retrieval  ·  v0.1.4", size=24, color=ACCENT)
     add_textbox(slide, Inches(0.8), Inches(3.9), Inches(11), Inches(0.6),
-                "C-Batch Technical Brief  ·  Hybrid packaging  ·  Agent-to-agent handoff",
+                "C-Batch  ·  Hybrid packaging  ·  Agent handoff  ·  Security-hardened",
                 size=16, color=WHITE)
     add_textbox(slide, Inches(0.8), Inches(6.2), Inches(11), Inches(0.4),
-                "pip install promptcapsule   ·   github.com/UdayaNirogi/promptcapsule",
+                "pip install promptcapsule==0.1.4   ·   github.com/UdayaNirogi/promptcapsule",
                 size=14, color=LIGHT)
 
 
@@ -137,11 +137,11 @@ def slide_what_it_is(prs):
 
     metrics = [
         ("500 B", "Inline threshold"),
-        ("~99%", "Smaller vault handle vs long prompt"),
-        ("SHA-256", "Integrity on every decompress"),
-        ("100%", "Lossless when verified"),
+        ("10 MiB", "Max prompt / zlib expand"),
+        ("SHA-256", "Fail-closed integrity"),
+        ("81", "Automated tests"),
         ("4", "Pluggable backends"),
-        ("27+", "Automated test cases"),
+        ("0.1.4", "Current release"),
     ]
     for i, (num, label) in enumerate(metrics):
         col, row = i % 3, i // 3
@@ -177,32 +177,35 @@ def slide_architecture(prs):
 def slide_quantify(prs):
     slide = blank_slide(prs)
     add_textbox(slide, Inches(0.4), Inches(0.15), Inches(12), Inches(0.4),
-                "5  ·  Quantified Results (measured on v0.1.0)", size=24, bold=True, color=NAVY)
+                "5  ·  Limits & Security (v0.1.4)", size=24, bold=True, color=NAVY)
     img = ROOT / "ppt_quantify.png"
     slide.shapes.add_picture(str(img), Inches(0.25), Inches(0.55), width=Inches(8.2))
 
-    # Right-side table-like text
     add_rect(slide, Inches(8.6), Inches(0.7), Inches(4.3), Inches(5.8), LIGHT)
     add_textbox(slide, Inches(8.8), Inches(0.9), Inches(4), Inches(0.4),
-                "Benchmark table", size=16, bold=True, color=TEAL)
+                "Hardening summary", size=16, bold=True, color=TEAL)
     rows = [
-        "Short 251 → 248 (inline)",
-        "Near 307 → 288 (inline)",
-        "RAG ~3KB → short vault key",
-        "Multi-shot → short vault key",
+        "Limits:",
+        "• Inline ≤ 500 bytes",
+        "• Max size 10 MiB",
         "",
-        "Format:",
-        "cap_i_<hash8>_<b85>",
-        "cap_v_<hash8>_<key>",
+        "Fixed (library):",
+        "• Fail-closed IntegrityError",
+        "• Empty prefix rejected",
+        "• zlib expansion capped",
+        "• Unguessable vault keys",
+        "• Vault leak redacted",
+        "• Base85 junk rejected",
+        "• S3 prefix + Gist owner",
         "",
-        "27+ = test cases (QA)",
-        "NOT capsule character count",
+        "Still not:",
+        "• Encryption / auth / MAC",
+        "• Demo HTTP bus (OOS)",
         "",
-        "Vault key length varies",
-        "by backend (mem/sql/gist/s3)",
+        "81 automated tests",
     ]
-    add_textbox(slide, Inches(8.8), Inches(1.4), Inches(4), Inches(4.8),
-                "\n".join(rows), size=13, color=NAVY)
+    add_textbox(slide, Inches(8.8), Inches(1.35), Inches(4), Inches(5.0),
+                "\n".join(rows), size=12, color=NAVY)
     add_footer(slide, 6)
 
 
@@ -231,7 +234,7 @@ def slide_agent_to_agent(prs):
     modes = [
         ("Inline capsule", "Self-contained. No shared store.\nBest for short instructions between agents."),
         ("Vault capsule", "Shared backend = shared memory.\nLong context stays in SQLite / Gist / S3."),
-        ("Integrity gate", "Agent B acts only if verified=True.\nSHA-256 proves the prompt was not altered."),
+        ("Integrity gate", "strict=True → IntegrityError on fail.\nVault bind failure returns empty text."),
     ]
     for i, (title, body) in enumerate(modes):
         left = Inches(0.5 + i * 4.2)
@@ -242,9 +245,9 @@ def slide_agent_to_agent(prs):
                     body, size=13, color=NAVY)
 
     add_textbox(slide, Inches(0.5), Inches(5.3), Inches(12.3), Inches(1.4),
-                "What this is: a payload format on top of the existing API — not a new agent protocol, and not encryption.\n"
-                "Both agents must share the same vault for vault-mode capsules. Inline capsules travel alone.\n"
-                "Backends: InMemory (tests) · SQLite (local) · GitHub Gist (team) · S3 (production). 27+ tests cover the library, not a fixed capsule length.",
+                "v0.1.4: not encryption / not auth. Capsule = payload format. Gist require_owner=True by default.\n"
+                "Both agents must share the same vault for vault-mode. Inline capsules travel alone.\n"
+                "81 tests. Historical “27+” = core test count, not capsule length.",
                 size=13, color=GRAY)
     add_footer(slide, 7)
 
@@ -299,10 +302,10 @@ def slide_close(prs):
     add_textbox(slide, Inches(0.8), Inches(1.2), Inches(11.5), Inches(0.6),
                 "7  ·  Takeaways & Next Steps", size=28, bold=True, color=WHITE)
     takeaways = [
-        "PromptCapsule = lossless packaging + optional vault retrieval",
-        "Agent-to-agent: pass a capsule, reconstruct the exact prompt, gate on verified",
-        "Quantified: ≤500B inline; long prompts → short vault keys (~99% smaller handle)",
-        "Quality: 27+ automated test cases — that number is tests, not capsule length",
+        "PromptCapsule v0.1.4 = lossless packaging + vault retrieval + fail-closed integrity",
+        "Limits: ≤500B inline · 10 MiB max prompt/zlib · unguessable vault keys",
+        "Agent handoff: decompress(strict=True); treat IntegrityError as reject",
+        "Not encryption / not MAC — protect vault ACLs; 81 automated tests on PyPI",
     ]
     add_textbox(slide, Inches(0.8), Inches(2.1), Inches(11.5), Inches(2.2),
                 "\n".join(f"→  {t}" for t in takeaways), size=16, color=LIGHT)
@@ -310,10 +313,10 @@ def slide_close(prs):
     add_textbox(slide, Inches(0.8), Inches(4.5), Inches(11.5), Inches(0.4),
                 "Resources", size=16, bold=True, color=ACCENT)
     add_textbox(slide, Inches(0.8), Inches(5.0), Inches(11.5), Inches(1.2),
-                "pip install promptcapsule\n"
+                "pip install promptcapsule==0.1.4\n"
                 "https://github.com/UdayaNirogi/promptcapsule\n"
-                "https://pypi.org/project/promptcapsule/\n"
-                "Docs: ABSTRACT.md · TECHNICAL_DESIGN.md",
+                "https://pypi.org/project/promptcapsule/0.1.4/\n"
+                "Docs: ABSTRACT.md · TECHNICAL_DESIGN.md · README security section",
                 size=14, color=WHITE)
     add_footer(slide, 8)
 

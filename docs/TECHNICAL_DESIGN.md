@@ -1,6 +1,6 @@
 # Technical Design Document — PromptCapsule
 
-**Version:** 0.1.0  
+**Version:** 0.1.4  
 **Audience:** C-batch / technical review  
 **Repository:** https://github.com/UdayaNirogi/promptcapsule  
 **Package:** `pip install promptcapsule`
@@ -75,10 +75,12 @@ Agent A                         shared channel                    Agent B
 |-----------|-------|-----------|
 | `INLINE_THRESHOLD` | **500 bytes** (UTF-8) | Practical bound for portable inline payloads |
 | `COMPRESSION_LEVEL` | **9** (zlib max) | Favor size over CPU for infrequent packaging |
-| Checksum | **SHA-256**, first **8 hex** chars in capsule | Collision resistance + short human-visible tag |
+| `MAX_PROMPT_SIZE` / `MAX_DECOMPRESSED_SIZE` | **10 MiB** | DoS / zip-bomb guards (0.1.2+) |
+| Checksum | **SHA-256**, first **8 hex** chars in capsule | Integrity signal — **not** a MAC (F09) |
 | Capsule prefix | `cap_` | Easy format detection |
-| Inline marker | `cap_i_<checksum8>_<base85>` | Self-contained |
-| Vault marker | `cap_v_<checksum8>_<backend_key>` | Opaque key into vault |
+| Inline marker | `cap_i_<checksum8>_<base85>` | Self-contained; Base85 must round-trip (0.1.4) |
+| Vault marker | `cap_v_<checksum8>_<backend_key>` | Opaque key; bind failure redacts text (0.1.4) |
+| `decompress(strict=True)` | default | Raises `IntegrityError` on verify failure |
 
 ### Measured packaging sizes (v0.1.0)
 

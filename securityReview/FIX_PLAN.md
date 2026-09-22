@@ -38,7 +38,8 @@ Scope: **library** first (bus is separate / not in this repo)
 | Demo bus | Out of scope (not in repo) |
 | PyPI upload of 0.1.2 | **Published** — https://pypi.org/project/promptcapsule/0.1.2/ |
 | PyPI upload of 0.1.3 | **Published** — https://pypi.org/project/promptcapsule/0.1.3/ |
-| Follow-up F07/F11/F13 | **Done** (v0.1.4 — ready to publish) |
+| Follow-up F07/F11/F13 | **Done** (v0.1.4) |
+| PyPI upload of 0.1.4 | **Published** — https://pypi.org/project/promptcapsule/0.1.4/ |
 
 ## Implemented (v0.1.4) — verification residual fixes
 

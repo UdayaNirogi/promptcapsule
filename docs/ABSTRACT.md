@@ -1,5 +1,7 @@
 # Abstract — PromptCapsule
 
+**Version:** 0.1.4 · **PyPI:** `pip install promptcapsule`
+
 **PromptCapsule** is an open-source Python library for **lossless prompt packaging**: it converts LLM prompt text into a portable *capsule* string that can be shared, versioned, and reconstructed with cryptographic integrity checks.
 
 Unlike semantic “prompt compression” tools (e.g., LLMLingua) that shorten meaning for token savings—and may alter wording—PromptCapsule **never changes the prompt content**. It uses a **hybrid strategy** quantified by a fixed threshold:
@@ -11,9 +13,11 @@ Unlike semantic “prompt compression” tools (e.g., LLMLingua) that shorten me
 
 \*Short, non-repetitive text can expand slightly due to encoding overhead; vault mode is where the portable handle shrinks dramatically.
 
-**Quality signal (do not confuse with capsule length):** the library ships with **27+ automated test cases** covering core, backends, integrity, and integration.
+**Limits:** max prompt / capsule / zlib expansion = **10 MiB**. Default `decompress(strict=True)` raises `IntegrityError` on failure. Vault bind failures never return foreign plaintext. Base85 rejects trailing junk. Gist retrieve requires owner (optional allowlist).
 
-### Quantified example (measured locally on v0.1.0)
+**Quality:** **81** automated tests (core + security regressions). Historical “27+” refers to core unit tests — **not** capsule character length.
+
+### Quantified example (measured locally)
 
 | Prompt type | Original size | Capsule (portable ID) | Relative size | Mode |
 |-------------|---------------|----------------------|---------------|------|
@@ -22,21 +26,16 @@ Unlike semantic “prompt compression” tools (e.g., LLMLingua) that shorten me
 | Long RAG-style context | 2,996 chars (~749 tokens†) | Short vault key (e.g. `cap_v_<hash8>_<backend_key>`) | **~1%** of original | Vault |
 | Multi-shot transcript | 2,250 chars (~562 tokens†) | Short vault key | **~1%** of original | Vault |
 
-†Token estimate ≈ characters ÷ 4 (rule of thumb; not a tokenizer). Vault key length varies by backend (InMemory vs SQLite vs Gist vs S3), not a fixed “27 characters.”
+†Token estimate ≈ characters ÷ 4 (rule of thumb; not a tokenizer). Vault key length varies by backend.
 
 ### Agent-to-agent potential
 
-A capsule is a **message payload**. One agent can pack a prompt and hand only the capsule to another agent; the receiver unpacks it and checks `verified` before acting.
+A capsule is a **message payload**. One agent packs a prompt and hands only the capsule to another agent; the receiver unpacks it and continues only if verification succeeds (`IntegrityError` otherwise).
 
-- **Inline capsules** travel alone (no shared store) — suited to short instructions.
-- **Vault capsules** use a shared backend (SQLite, GitHub Gist, S3) as shared memory — suited to long context, with a much smaller handle on the wire.
-- This is a **use of the existing API**, not a separate agent protocol and not encryption. Vault-mode handoff requires both agents to reach the same backend.
+- **Inline capsules** travel alone (no shared store) — short instructions ≤500 bytes.
+- **Vault capsules** use a shared backend as shared memory — long context; small handle on the wire.
+- **Not** encryption, **not** an agent framework, **not** a MAC (8-hex prefix). Use HMAC helpers if you need authenticity.
 
-### What this is — and is not
-
-- **Is:** A packaging + retrieval layer for exact prompt text (shareable IDs, vault backends, checksums), including agent-to-agent handoff of that text.
-- **Is not:** An LLM that compresses meaning; not a claim of “any prompt → 8 characters” without storage; not an agent framework.
-
-**Availability:** `pip install promptcapsule` · GitHub: [UdayaNirogi/promptcapsule](https://github.com/UdayaNirogi/promptcapsule) · PyPI: [promptcapsule](https://pypi.org/project/promptcapsule/)
+**Availability:** `pip install promptcapsule` · GitHub: [UdayaNirogi/promptcapsule](https://github.com/UdayaNirogi/promptcapsule) · PyPI: [promptcapsule](https://pypi.org/project/promptcapsule/0.1.4/)
 
 **Keywords:** prompt management, lossless compression, vault retrieval, SHA-256 integrity, agent-to-agent handoff, LLM tooling, open source.
