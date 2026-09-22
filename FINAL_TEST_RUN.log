@@ -1,0 +1,61 @@
+======================================================================
+PromptCapsule - Regression Test Suite
+======================================================================
+
+Core Functionality Tests:
+----------------------------------------------------------------------
+✓ Compress short prompt (inline mode)
+✓ Reject empty strings
+✓ Reject invalid types
+✓ Decompress short prompt
+✓ Long prompt requires vault backend
+✓ Compress long prompt with vault
+✓ Decompress long prompt
+
+Character Encoding Tests:
+----------------------------------------------------------------------
+✓ Unicode characters
+✓ Multiline prompts
+✓ Null bytes in prompts
+
+Edge Case Tests:
+----------------------------------------------------------------------
+✓ Exact threshold (500 bytes)
+✓ Just over threshold (501 bytes)
+
+Multiple Operations Tests:
+----------------------------------------------------------------------
+✓ Multiple short prompts
+✓ Multiple long prompts
+
+Backend Tests:
+----------------------------------------------------------------------
+✓ Memory backend store/retrieve
+✓ Memory backend key not found
+✓ SQLite backend store/retrieve
+✓ SQLite backend persistence
+
+Integrity Tests:
+----------------------------------------------------------------------
+✓ Checksum consistency
+✓ Different data, different hashes
+✓ Checksum verification (valid)
+✓ Checksum verification (invalid)
+✓ Checksum prefix verification
+
+Error Handling Tests:
+----------------------------------------------------------------------
+✓ Invalid capsule format
+✓ Unknown capsule type
+
+Metrics and Metadata Tests:
+----------------------------------------------------------------------
+✓ CapsuleResult metrics
+
+End-to-End Tests:
+----------------------------------------------------------------------
+✓ User scenario: Share prompt across devices
+
+======================================================================
+Test Results: 27/27 passed
+======================================================================

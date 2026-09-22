@@ -1,0 +1,1 @@
+"""PromptCapsule test suite."""
