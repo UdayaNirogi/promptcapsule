@@ -69,3 +69,7 @@ promptcapsule.db
 test_*.db
 images/
 ~$*
+
+# Local push helper docs (may contain secrets)
+FINAL_PUSH_INSTRUCTIONS.md
+PUSH_TO_GITHUB_NOW.md
