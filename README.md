@@ -52,6 +52,20 @@ This is a use of the existing API, not a separate agent protocol, and not encryp
 
 ---
 
+## What's new in 0.1.4 (follow-up hardening)
+
+Addresses remaining items from the 0.1.3 fix-verification review:
+
+| ID | Change |
+|----|--------|
+| **F13** | Inline Base85 must **round-trip**; trailing junk (`_EXTRA`) is rejected |
+| **F07** | Vault bind failure returns **empty text** even with `strict=False` (no cross-agent plaintext leak) |
+| **F11** | `GitHubGistBackend(require_owner=True)` by default; optional `allowed_gist_ids` allowlist |
+
+Still open by design: **F09** (8-hex prefix is not a MAC — use `IntegrityChecker` HMAC if you need authenticity). Demo bus F03–F05 remain out of package scope.
+
+---
+
 ## What's new in 0.1.3 (security & limits documentation)
 
 Version **0.1.2** hardened the library against the issues in our security review. **0.1.3** publishes the same protections with clear PyPI/README documentation of **limits**, **what was fixed**, and **what is still out of scope**.

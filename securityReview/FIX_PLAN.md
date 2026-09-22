@@ -38,6 +38,14 @@ Scope: **library** first (bus is separate / not in this repo)
 | Demo bus | Out of scope (not in repo) |
 | PyPI upload of 0.1.2 | **Published** — https://pypi.org/project/promptcapsule/0.1.2/ |
 | PyPI upload of 0.1.3 | **Published** — https://pypi.org/project/promptcapsule/0.1.3/ |
+| Follow-up F07/F11/F13 | **Done** (v0.1.4 — ready to publish) |
+
+## Implemented (v0.1.4) — verification residual fixes
+
+- **F13:** Base85 round-trip check rejects trailing junk (`_EXTRA`)
+- **F07:** Vault integrity failure returns empty `text` even with `strict=False`
+- **F11:** `GitHubGistBackend(require_owner=True)` + optional `allowed_gist_ids`
+- Still open by design: **F09** (8-hex ≠ MAC); bus **F03–F05** out of package
 
 ## Implemented (v0.1.2)
 

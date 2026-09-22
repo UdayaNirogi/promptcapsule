@@ -90,6 +90,22 @@ class TestVaultHardening:
         with pytest.raises(IntegrityError):
             pc.decompress(swapped, vault_backend=backend)
 
+    def test_vault_key_swap_strict_false_redacts_plaintext(self):
+        """F07 residual: even strict=False must not return the other agent's text."""
+        backend = InMemoryBackend()
+        pc = PromptCapsule()
+        a = "A" * 600
+        b = "B" * 600
+        cap_a = pc.compress(a, vault_backend=backend)
+        cap_b = pc.compress(b, vault_backend=backend)
+        prefix_a = cap_a.split("_")[2]
+        key_b = cap_b.split("_", 3)[-1]
+        swapped = f"cap_v_{prefix_a}_{key_b}"
+        result = pc.decompress(swapped, vault_backend=backend, strict=False)
+        assert result.verified is False
+        assert result.text == ""
+        assert result.text != b
+
     def test_sqlite_checksum_binding(self, tmp_path):
         db = str(tmp_path / "vault.db")
         backend = SQLiteBackend(db)
@@ -99,6 +115,96 @@ class TestVaultHardening:
         result = pc.decompress(capsule, vault_backend=backend)
         assert result.verified is True
         assert result.text == text
+
+
+class TestCapsuleMalleability:
+    def test_trailing_extra_rejected(self):
+        """F13: trailing _EXTRA must not decompress as verified."""
+        pc = PromptCapsule()
+        capsule = pc.compress("hello")
+        with pytest.raises(ValueError, match="Base85|trailing|junk|canonical"):
+            pc.decompress(capsule + "_EXTRA", strict=False)
+
+    def test_trailing_deadbeef_rejected(self):
+        pc = PromptCapsule()
+        capsule = pc.compress("hello")
+        with pytest.raises(ValueError):
+            pc.decompress(capsule + "_deadbeef", strict=False)
+
+
+class TestGistAllowlist:
+    def test_gist_owner_and_allowlist_guards(self):
+        """F11: refuse foreign / non-allowlisted gist ids (mocked)."""
+        from promptcapsule.backends import GitHubGistBackend
+
+        class FakeOwner:
+            def __init__(self, login):
+                self.login = login
+
+        class FakeFile:
+            def __init__(self, content):
+                self.content = content
+
+        class FakeGist:
+            def __init__(self, gid, owner_login, text="secret", checksum="abc"):
+                self.id = gid
+                self.owner = FakeOwner(owner_login)
+                self.files = {
+                    "prompt.txt": FakeFile(text),
+                    "checksum.txt": FakeFile(checksum),
+                }
+
+        class FakeUser:
+            login = "alice"
+
+            def create_gist(self, **kwargs):
+                return FakeGist("gist_owned", "alice")
+
+        class FakeGithub:
+            def __init__(self, token):
+                self._gists = {
+                    "gist_owned": FakeGist("gist_owned", "alice"),
+                    "gist_other": FakeGist("gist_other", "bob", text="other"),
+                }
+
+            def get_user(self):
+                return FakeUser()
+
+            def get_gist(self, key):
+                return self._gists[key]
+
+        import promptcapsule.backends as backends_mod  # noqa: F401
+
+        real_init = GitHubGistBackend.__init__
+
+        def fake_init(self, token, *, require_owner=True, allowed_gist_ids=None):
+            self.github = FakeGithub(token)
+            self.user = self.github.get_user()
+            self._login = self.user.login
+            self.require_owner = require_owner
+            self.allowed_gist_ids = (
+                set(allowed_gist_ids) if allowed_gist_ids is not None else None
+            )
+            self._checksum_cache = {}
+
+        GitHubGistBackend.__init__ = fake_init
+        try:
+            backend = GitHubGistBackend("token")
+            # Foreign owner refused
+            with pytest.raises(KeyError, match="not owned|refused"):
+                backend.retrieve_with_checksum("gist_other")
+            # Own gist OK
+            text, _ = backend.retrieve_with_checksum("gist_owned")
+            assert text == "secret"
+
+            # Allowlist refuses even own gist if not listed
+            backend2 = GitHubGistBackend(
+                "token", allowed_gist_ids={"only_this"}
+            )
+            with pytest.raises(KeyError, match="allowlist"):
+                backend2.retrieve_with_checksum("gist_owned")
+        finally:
+            GitHubGistBackend.__init__ = real_init
 
 
 class TestHmacFix:

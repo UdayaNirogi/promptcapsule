@@ -34,9 +34,11 @@ class PromptCapsule:
     - Short prompts (≤ INLINE_THRESHOLD bytes): zlib + Base85 inline
     - Long prompts: vault storage, referenced by an unguessable key
 
-    Security defaults (v0.1.2+):
+    Security defaults (v0.1.4+):
     - decompress(strict=True) raises IntegrityError on checksum failure
     - empty / malformed checksum prefixes are rejected
+    - Base85 payloads must round-trip (rejects trailing junk / malleability)
+    - vault bind failures never return retrieved plaintext
     - zlib decompression is bounded (max_length)
     - compress rejects oversized inputs
     """
@@ -174,6 +176,20 @@ class PromptCapsule:
             )
         return out
 
+    @staticmethod
+    def _b85decode_strict(encoded: str) -> bytes:
+        """Decode Base85 and reject trailing junk / non-canonical encodings (F13)."""
+        try:
+            compressed = base64.b85decode(encoded)
+        except Exception as e:
+            raise ValueError(f"Invalid Base85 payload: {e}") from e
+        # Round-trip: ignores of trailing junk would yield a different re-encode
+        if base64.b85encode(compressed).decode("ascii") != encoded:
+            raise ValueError(
+                "Invalid Base85 payload: trailing junk or non-canonical encoding"
+            )
+        return compressed
+
     def _decompress_inline(self, capsule_data: str) -> CapsuleResult:
         """Decompress inline capsule."""
         try:
@@ -184,7 +200,7 @@ class PromptCapsule:
             _, checksum_prefix, encoded = parts
             self._validate_checksum_prefix(checksum_prefix)
 
-            compressed = base64.b85decode(encoded)
+            compressed = self._b85decode_strict(encoded)
             text_bytes = self._safe_zlib_decompress(compressed)
             text = text_bytes.decode("utf-8")
 
@@ -217,6 +233,8 @@ class PromptCapsule:
 
             _, checksum_prefix, key = parts
             self._validate_checksum_prefix(checksum_prefix)
+            if not key:
+                raise ValueError("Invalid vault capsule: empty key")
 
             text, stored_checksum = vault_backend.retrieve_with_checksum(key)
             computed_checksum = self._compute_checksum(text)
@@ -228,12 +246,16 @@ class PromptCapsule:
                 and computed_checksum.startswith(checksum_prefix)
             )
 
+            # F07: never return another agent's plaintext on bind failure,
+            # even when strict=False.
+            safe_text = text if bound_ok else ""
+
             return CapsuleResult(
-                text=text,
+                text=safe_text,
                 verified=bound_ok,
                 mode="vault",
-                checksum=computed_checksum,
-                original_size=len(text.encode("utf-8")),
+                checksum=computed_checksum if bound_ok else stored_checksum or computed_checksum,
+                original_size=len(text.encode("utf-8")) if bound_ok else 0,
                 capsule_size=len(key),
             )
         except IntegrityError:

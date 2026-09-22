@@ -3,6 +3,7 @@
 import secrets
 import sqlite3
 from datetime import datetime
+from typing import Optional, Set
 
 from .core import VaultBackend
 
@@ -101,9 +102,19 @@ class SQLiteBackend(VaultBackend):
 
 
 class GitHubGistBackend(VaultBackend):
-    """GitHub Gist-based vault backend (requires PyGithub)."""
+    """GitHub Gist-based vault backend (requires PyGithub).
 
-    def __init__(self, token: str):
+    By default, retrieve only succeeds for gists owned by the authenticated
+    user (confused-deputy mitigation). Optionally restrict to an allowlist.
+    """
+
+    def __init__(
+        self,
+        token: str,
+        *,
+        require_owner: bool = True,
+        allowed_gist_ids: Optional[Set[str]] = None,
+    ):
         try:
             from github import Github
         except ImportError as e:
@@ -114,6 +125,11 @@ class GitHubGistBackend(VaultBackend):
 
         self.github = Github(token)
         self.user = self.github.get_user()
+        self._login = self.user.login
+        self.require_owner = require_owner
+        self.allowed_gist_ids: Optional[Set[str]] = (
+            set(allowed_gist_ids) if allowed_gist_ids is not None else None
+        )
         self._checksum_cache: dict = {}
 
     def store(self, text: str, checksum: str) -> str:
@@ -131,15 +147,30 @@ class GitHubGistBackend(VaultBackend):
             description=description,
         )
         self._checksum_cache[gist.id] = checksum
+        if self.allowed_gist_ids is not None:
+            self.allowed_gist_ids.add(gist.id)
         return gist.id
 
     def retrieve(self, key: str) -> str:
         text, _ = self.retrieve_with_checksum(key)
         return text
 
+    def _assert_gist_allowed(self, key: str, gist) -> None:
+        if self.allowed_gist_ids is not None and key not in self.allowed_gist_ids:
+            raise KeyError(
+                f"Gist id not in allowlist: refused ({key!r})"
+            )
+        if self.require_owner:
+            owner = getattr(getattr(gist, "owner", None), "login", None)
+            if owner is None or owner != self._login:
+                raise KeyError(
+                    f"Gist not owned by authenticated user {self._login!r}: refused"
+                )
+
     def retrieve_with_checksum(self, key: str) -> tuple:
         try:
             gist = self.github.get_gist(key)
+            self._assert_gist_allowed(key, gist)
             if "prompt.txt" in gist.files:
                 text = gist.files["prompt.txt"].content
             else:
@@ -151,6 +182,8 @@ class GitHubGistBackend(VaultBackend):
             else:
                 stored = self._checksum_cache.get(key, "")
             return text, stored
+        except KeyError:
+            raise
         except Exception as e:
             raise KeyError(f"Failed to retrieve gist {key}: {e}") from e
 
