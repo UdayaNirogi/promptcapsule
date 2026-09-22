@@ -1,6 +1,6 @@
 # PromptCapsule 📦
 
-> Open-source prompt compression & retrieval library that solves a real problem for developers and AI enthusiasts.
+> Lossless prompt capsules for sharing, retrieval, and agent-to-agent handoff.
 
 ![PromptCapsule Infographic](assets/promptcapsule_infographic.png)
 
@@ -14,8 +14,8 @@ When people talk about "prompt compression," they usually mean two fundamentally
 
 | Type | What It Does | Trade-off |
 |------|-------------|-----------|
-| **Type 1: True Compression** | Mathematically limited to ~500-word prompts → 8 characters (lossless) | No external storage needed, but very limited scope |
-| **Type 2: Key-Based Retrieval** | 2,000-word prompt → 8-character hash that reconstructs the original (from any device, any account) | Requires a storage backend, but solves the real problem |
+| **Type 1: True Compression** | Small prompts (≤500 bytes) packed inline with zlib + Base85 | No external storage; size reduction is entropy-limited |
+| **Type 2: Key-Based Retrieval** | Long prompts stored in a vault; agents share a short capsule key | Requires a shared backend; the handle is ~99% smaller than a multi‑KB prompt |
 
 **PromptCapsule** gives you **BOTH**, transparently and automatically.
 
@@ -35,6 +35,21 @@ Long prompts (>500 chars):
 
 Both modes are **automatic** — just compress once and the library picks the best strategy. Both are **verified** — checksums ensure byte-for-byte exact reconstruction.
 
+### Agent-to-agent handoff
+
+A capsule is a message payload. One agent packs a prompt; another unpacks it and continues only if verification succeeds.
+
+```python
+result = pc.decompress(capsule, vault_backend=vault)  # strict=True by default
+# raises IntegrityError if checksum fails — fail closed for agent handoffs
+```
+
+- **Inline** (`cap_i_…`): self-contained. No shared store. Best for short instructions (≤500 bytes).
+- **Vault** (`cap_v_…`): both agents use the same backend (SQLite, GitHub Gist, or S3). The long prompt stays in the vault; only a short key moves between agents.
+- Use `strict=False` only if you intentionally want plaintext with `verified=False` (legacy).
+
+This is a use of the existing API, not a separate agent protocol, and not encryption. The project includes **27+ automated test cases** (plus security regressions) — that number is test coverage, not capsule length.
+
 ---
 
 ## Features
@@ -43,6 +58,11 @@ Both modes are **automatic** — just compress once and the library picks the be
 - Short prompts: Inline zlib + Base85 compression
 - Long prompts: Vault storage with automatic fallback
 - Automatic mode selection based on size
+
+🤝 **Agent-to-agent handoff**
+- Pass a capsule instead of the full prompt
+- Receiver reconstructs the original text and checks `verified`
+- Inline capsules travel alone; vault capsules use a shared backend
 
 🔒 **Integrity Verification**
 - SHA256 checksums for all capsules

@@ -1,0 +1,31 @@
+Security review of promptcapsule 0.1.0 (+ the demo capsule bus) is done. Full report is on your Mac as promptcapsule-SECURITY_REPORT.md.
+
+Overall risk
+High if the bus/shared vault is reachable by untrusted agents or a network
+Medium for trusted local agent pairs that always check verified
+No RCE, no pickle/eval/exec, SQLite queries are parameterized, pip-audit clean (package has zero deps)
+This library is packaging + retrieval — not encryption or auth.
+
+High findings
+Integrity fail-open — decompress() still returns plaintext when the checksum fails (verified=False). Easy to misuse if callers ignore the flag.
+Empty checksum → verified=True — startswith("") makes a stripped checksum look valid.
+Bus has no auth — anyone can create/list/open; from_agent is spoofable.
+List + open = full disclosure — GET /capsules exposes capsule IDs; open returns full plaintext (including the research brief in tests).
+No body size limit — 25 MB POSTs accepted; vault DB grew to ~30 MB.
+zlib bomb — ~10 KB capsule expanded to ~8 MB (library and bus).
+Medium findings
+Vault key swap can return another agent’s text (with verified=False)
+Predictable vault keys (enumerable)
+Weak 8-hex checksum (not a MAC)
+S3/Gist retrieve trusts capsule-controlled IDs (confused-deputy if tokens are broad)
+Broken hmac verify helper (NameError)
+What looked clean
+Empty/malformed prefixes and bad Base85 refused; Unicode/null-byte round-trips OK; no SQLi via keys; concurrent SQLite writers OK; Bandit only flagged a constant table-name f-string (false positive).
+
+If you use it for agent↔agent handoffs
+Always require verified is True (fail closed).
+Keep the bus on 127.0.0.1 + add API keys or mTLS before any shared use.
+Cap request size and zlib.decompress(..., max_length=…).
+Use unguessable vault keys; bind key↔checksum in the vault.
+Don’t treat capsules as secrets or access control by themselves.
+I can patch the demo bus (auth stub, size limits, strict verify) or draft upstream issues for the library next if you want.

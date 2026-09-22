@@ -29,8 +29,8 @@ class JSONBackend(VaultBackend):
     
     def store(self, text: str, checksum: str) -> str:
         """Store text and return a key."""
-        self.counter += 1
-        key = f"json_{self.counter:06d}"
+        import secrets
+        key = f"json_{secrets.token_urlsafe(12)}"
         self.data[key] = {
             "text": text,
             "checksum": checksum,
@@ -43,6 +43,13 @@ class JSONBackend(VaultBackend):
         if key not in self.data:
             raise KeyError(f"Key not found: {key}")
         return self.data[key]["text"]
+
+    def retrieve_with_checksum(self, key: str):
+        """Return text + stored checksum for integrity binding."""
+        if key not in self.data:
+            raise KeyError(f"Key not found: {key}")
+        record = self.data[key]
+        return record["text"], record["checksum"]
 
 # Usage example
 print("=" * 70)

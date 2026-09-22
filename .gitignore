@@ -68,3 +68,4 @@ env/
 promptcapsule.db
 test_*.db
 images/
+~$*

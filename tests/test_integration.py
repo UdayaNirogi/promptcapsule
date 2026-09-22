@@ -173,13 +173,13 @@ class TestPerformanceCharacteristics:
         self.pc = PromptCapsule()
     
     def test_compression_ratio_repetitive_content(self):
-        """Test that repetitive content compresses well."""
-        # Highly repetitive content should compress very well
-        repetitive = "hello " * 100
+        """Test that repetitive content compresses well in inline mode."""
+        # Stay under INLINE_THRESHOLD (500 bytes) so compress stays inline
+        repetitive = ("hello " * 80)[:480]
         capsule = self.pc.compress(repetitive)
         result = self.pc.decompress(capsule)
         
-        # Check compression ratio
+        assert result.text == repetitive
         original_size = len(repetitive.encode('utf-8'))
         capsule_size = len(capsule)
         ratio = capsule_size / original_size
