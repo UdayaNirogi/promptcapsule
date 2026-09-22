@@ -80,12 +80,12 @@ def slide_title(prs):
     add_textbox(slide, Inches(0.8), Inches(2.0), Inches(11), Inches(1),
                 "PromptCapsule", size=48, bold=True, color=WHITE)
     add_textbox(slide, Inches(0.8), Inches(3.0), Inches(11), Inches(0.8),
-                "Lossless Prompt Packaging & Retrieval  ·  v0.1.4", size=24, color=ACCENT)
+                "Lossless Prompt Packaging & Retrieval  ·  v0.1.5", size=24, color=ACCENT)
     add_textbox(slide, Inches(0.8), Inches(3.9), Inches(11), Inches(0.6),
                 "C-Batch  ·  Hybrid packaging  ·  Agent handoff  ·  Security-hardened",
                 size=16, color=WHITE)
     add_textbox(slide, Inches(0.8), Inches(6.2), Inches(11), Inches(0.4),
-                "pip install promptcapsule==0.1.4   ·   github.com/UdayaNirogi/promptcapsule",
+                "pip install promptcapsule==0.1.5   ·   github.com/UdayaNirogi/promptcapsule",
                 size=14, color=LIGHT)
 
 
@@ -128,20 +128,19 @@ def slide_what_it_is(prs):
 
     add_rect(slide, Inches(0.5), Inches(1.0), Inches(12.3), Inches(1.5), LIGHT)
     add_textbox(slide, Inches(0.7), Inches(1.15), Inches(12), Inches(1.2),
-                "Abstract: PromptCapsule is a Python library that turns LLM prompt text into a portable "
-                "capsule string and reconstructs the original byte-for-byte. Inline mode (≤500 bytes) "
-                "uses zlib+Base85; vault mode stores long prompts and returns a short backend key "
-                "(~99% smaller shareable handle). Every decompress returns verified SHA-256 integrity. "
-                "Quality: 27+ automated test cases.",
+                "Abstract: PromptCapsule turns LLM prompt text into a portable capsule and "
+                "reconstructs it byte-for-byte. Inline (≤500 bytes): zlib+Base85. Vault (>500 bytes): "
+                "short key into a shared store. Limits: 10 MiB max prompt/zlib. "
+                "Default decompress is fail-closed. Suite: 81 automated tests.",
                 size=14, color=NAVY)
 
     metrics = [
         ("500 B", "Inline threshold"),
-        ("10 MiB", "Max prompt / zlib expand"),
-        ("SHA-256", "Fail-closed integrity"),
+        ("10 MiB", "Max prompt / zlib"),
+        ("SHA-256", "Fail-closed verify"),
         ("81", "Automated tests"),
         ("4", "Pluggable backends"),
-        ("0.1.4", "Current release"),
+        ("0.1.5", "Current release"),
     ]
     for i, (num, label) in enumerate(metrics):
         col, row = i % 3, i // 3
@@ -177,7 +176,7 @@ def slide_architecture(prs):
 def slide_quantify(prs):
     slide = blank_slide(prs)
     add_textbox(slide, Inches(0.4), Inches(0.15), Inches(12), Inches(0.4),
-                "5  ·  Limits & Security (v0.1.4)", size=24, bold=True, color=NAVY)
+                "5  ·  Limits & Security", size=24, bold=True, color=NAVY)
     img = ROOT / "ppt_quantify.png"
     slide.shapes.add_picture(str(img), Inches(0.25), Inches(0.55), width=Inches(8.2))
 
@@ -189,18 +188,20 @@ def slide_quantify(prs):
         "• Inline ≤ 500 bytes",
         "• Max size 10 MiB",
         "",
-        "Fixed (library):",
+        "Fixed in library:",
         "• Fail-closed IntegrityError",
-        "• Empty prefix rejected",
+        "• Invalid prefixes rejected",
         "• zlib expansion capped",
         "• Unguessable vault keys",
-        "• Vault leak redacted",
+        "• No vault plaintext leak",
         "• Base85 junk rejected",
         "• S3 prefix + Gist owner",
         "",
-        "Still not:",
-        "• Encryption / auth / MAC",
-        "• Demo HTTP bus (OOS)",
+        "Still limitations:",
+        "• Not encryption",
+        "• Not authentication",
+        "• Not a full MAC",
+        "• Demo HTTP bus OOS",
         "",
         "81 automated tests",
     ]
@@ -245,9 +246,9 @@ def slide_agent_to_agent(prs):
                     body, size=13, color=NAVY)
 
     add_textbox(slide, Inches(0.5), Inches(5.3), Inches(12.3), Inches(1.4),
-                "v0.1.4: not encryption / not auth. Capsule = payload format. Gist require_owner=True by default.\n"
+                "v0.1.5: packaging + retrieval — not encryption / not auth. Gist require_owner by default.\n"
                 "Both agents must share the same vault for vault-mode. Inline capsules travel alone.\n"
-                "81 tests. Historical “27+” = core test count, not capsule length.",
+                "Automated test suite: 81 tests (core + security).",
                 size=13, color=GRAY)
     add_footer(slide, 7)
 
@@ -302,10 +303,10 @@ def slide_close(prs):
     add_textbox(slide, Inches(0.8), Inches(1.2), Inches(11.5), Inches(0.6),
                 "7  ·  Takeaways & Next Steps", size=28, bold=True, color=WHITE)
     takeaways = [
-        "PromptCapsule v0.1.4 = lossless packaging + vault retrieval + fail-closed integrity",
-        "Limits: ≤500B inline · 10 MiB max prompt/zlib · unguessable vault keys",
-        "Agent handoff: decompress(strict=True); treat IntegrityError as reject",
-        "Not encryption / not MAC — protect vault ACLs; 81 automated tests on PyPI",
+        "PromptCapsule = lossless packaging + vault retrieval + fail-closed integrity",
+        "Limits: ≤500B inline · 10 MiB max · unguessable keys · 81 automated tests",
+        "Open limitations: not encryption, not auth, 8-hex checksum is not a MAC",
+        "Agent pattern: decompress(strict=True); reject on IntegrityError",
     ]
     add_textbox(slide, Inches(0.8), Inches(2.1), Inches(11.5), Inches(2.2),
                 "\n".join(f"→  {t}" for t in takeaways), size=16, color=LIGHT)
@@ -313,10 +314,10 @@ def slide_close(prs):
     add_textbox(slide, Inches(0.8), Inches(4.5), Inches(11.5), Inches(0.4),
                 "Resources", size=16, bold=True, color=ACCENT)
     add_textbox(slide, Inches(0.8), Inches(5.0), Inches(11.5), Inches(1.2),
-                "pip install promptcapsule==0.1.4\n"
+                "pip install promptcapsule==0.1.5\n"
                 "https://github.com/UdayaNirogi/promptcapsule\n"
-                "https://pypi.org/project/promptcapsule/0.1.4/\n"
-                "Docs: ABSTRACT.md · TECHNICAL_DESIGN.md · README security section",
+                "https://pypi.org/project/promptcapsule/0.1.5/\n"
+                "Docs: ABSTRACT.md · TECHNICAL_DESIGN.md · README (limits & security)",
                 size=14, color=WHITE)
     add_footer(slide, 8)
 

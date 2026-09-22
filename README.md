@@ -49,37 +49,37 @@ result = pc.decompress(capsule, vault_backend=vault)  # strict=True by default
 - **Vault** (`cap_v_…`): both agents use the same backend (SQLite, GitHub Gist, or S3). The long prompt stays in the vault; only a short key moves between agents.
 - Use `strict=False` only if you intentionally want plaintext with `verified=False` (legacy).
 
-This is a use of the existing API, not a separate agent protocol, and not encryption. The project includes **81 automated tests** (core + security regressions). The number **27+** historically referred to core unit tests — it is **test coverage**, not capsule length.
+This is a use of the existing API, not a separate agent protocol, and not encryption. The project includes **81 automated tests** (core, backends, integrity, integration, and security regressions).
 
 ---
+
+## What's new in 0.1.5 (docs clarity)
+
+- Public docs now state **81 automated tests** (not “27”).
+- Security write-up uses plain language (no internal finding codes like F07/F10).
+- Limits, fixed issues, and remaining open limitations are listed clearly for PyPI readers.
 
 ## What's new in 0.1.4 (follow-up hardening)
 
-Addresses remaining items from the 0.1.3 fix-verification review:
+| Change | Detail |
+|--------|--------|
+| Base85 integrity | Capsule payload must round-trip; trailing junk is rejected |
+| Vault key-swap safety | On bind failure, returned text is empty even if `strict=False` |
+| Gist backend | Retrieve requires gist owned by the token user; optional ID allowlist |
 
-| ID | Change |
-|----|--------|
-| **F13** | Inline Base85 must **round-trip**; trailing junk (`_EXTRA`) is rejected |
-| **F07** | Vault bind failure returns **empty text** even with `strict=False` (no cross-agent plaintext leak) |
-| **F11** | `GitHubGistBackend(require_owner=True)` by default; optional `allowed_gist_ids` allowlist |
+## What's new in 0.1.3 / 0.1.2 (security baseline)
 
-Still open by design: **F09** (8-hex prefix is not a MAC — use `IntegrityChecker` HMAC if you need authenticity). Demo bus F03–F05 remain out of package scope.
-
----
-
-## What's new in 0.1.3 (security & limits documentation)
-
-Version **0.1.2** hardened the library against the issues in our security review. **0.1.3** publishes the same protections with clear PyPI/README documentation of **limits**, **what was fixed**, and **what is still out of scope**.
+Version **0.1.2** hardened the library; **0.1.3** documented limits on PyPI.
 
 ### Size & operational limits
 
 | Limit | Value | Behavior |
 |-------|-------|----------|
-| Inline vs vault threshold | **500 bytes** (UTF-8) | ≤500 → inline capsule; >500 → requires a vault backend |
-| Max prompt on compress | **10 MiB** (`MAX_PROMPT_SIZE`) | Larger inputs raise `ValueError` |
+| Inline vs vault threshold | **500 bytes** (UTF-8) | ≤500 → inline; >500 → requires a vault backend |
+| Max prompt on compress | **10 MiB** | Larger inputs raise `ValueError` |
 | Max capsule string size | **10 MiB** | Oversized capsules rejected on decompress |
-| Max zlib expansion | **10 MiB** (`MAX_DECOMPRESSED_SIZE`) | Blocks zip/zlib bombs |
-| Checksum in capsule | **8 hex chars** (SHA-256 prefix) | Integrity signal, **not** a MAC / not encryption |
+| Max zlib expansion | **10 MiB** | Blocks zip/zlib bombs |
+| Checksum in capsule | **8 hex chars** (SHA-256 prefix) | Integrity check only — **not** a MAC / not encryption |
 | Vault keys | Unguessable (`secrets.token_urlsafe`) | Not sequential counters |
 
 ```python
@@ -91,31 +91,33 @@ print(pc.MAX_PROMPT_SIZE)        # 10485760
 print(pc.MAX_DECOMPRESSED_SIZE)  # 10485760
 ```
 
-### Security issues addressed (library)
+### Security issues fixed (library)
 
-| Issue | Status | Mitigation |
-|-------|--------|------------|
-| Integrity fail-open (plaintext when checksum fails) | **Fixed** (0.1.2+) | `decompress(strict=True)` raises `IntegrityError` |
-| Empty checksum prefix → `verified=True` | **Fixed** | Exactly 8 lowercase hex chars required |
-| zlib bomb / unbounded decompress | **Fixed** | Cap at **10 MiB** expansion |
-| Huge compress DoS | **Fixed** | `MAX_PROMPT_SIZE` = **10 MiB** |
-| Predictable vault keys | **Fixed** | `secrets.token_urlsafe` keys |
-| Vault key swap → other agent’s text | **Fixed** (0.1.4) | Fail-closed + bind; `strict=False` returns **empty text** |
-| Trailing Base85 junk (`_EXTRA`) | **Fixed** (0.1.4) | Round-trip encode check |
-| S3 confused-deputy keys | **Fixed** | Prefix + `..` guard |
-| Gist capsule-controlled IDs | **Fixed** (0.1.4) | `require_owner=True` + optional allowlist |
-| HMAC helper `NameError` | **Fixed** | Module-level `hmac` |
+| Issue | Mitigation |
+|-------|------------|
+| Integrity fail-open | Default `decompress(strict=True)` raises `IntegrityError` |
+| Empty / invalid checksum prefix | Exactly 8 lowercase hex characters required |
+| Unbounded zlib decompress | Expansion capped at 10 MiB |
+| Huge compress DoS | Compress capped at 10 MiB |
+| Predictable vault keys | Cryptographic random keys |
+| Vault key swap leaking another agent’s text | Fail-closed + checksum binding; failed bind returns empty text |
+| Trailing junk on inline capsules | Base85 round-trip validation |
+| S3 key confusion | Keys must stay under configured prefix; `..` blocked |
+| Gist ID confusion | Owner check by default; optional allowlist |
+| Broken HMAC helper | Module-level `hmac`; `verify_signature` works |
 
-### Remaining limitations (read carefully)
+### Remaining limitations (still open / by design)
 
-PromptCapsule is **packaging + retrieval**, not a security boundary by itself:
+PromptCapsule is **packaging + retrieval**, not a full security product:
 
-- **Not encryption.** Capsules and vault contents are readable to anyone who can obtain them or access the vault.
-- **Not authentication.** There is no built-in agent identity, API keys, or mTLS in the library.
-- **8-hex checksum is truncated SHA-256**, not an HMAC. Use `IntegrityChecker` HMAC helpers (and your own secrets) if you need authenticity beyond integrity.
-- **Vault handoffs require a shared backend** both agents can reach, with correct ACLs (file perms, private gists, IAM).
-- **Custom backends** must implement `retrieve_with_checksum` for full key↔checksum binding.
-- **Demo “capsule bus” HTTP services** (if you build one) need their own auth, rate limits, and body size caps — that is **outside** this package.
+| Limitation | What it means |
+|------------|----------------|
+| **Not encryption** | Anyone with the capsule (inline) or vault access can read prompt text |
+| **Not authentication** | No built-in agent identity, API keys, or mTLS |
+| **8-hex checksum is not a MAC** | Truncated SHA-256 proves integrity of content vs prefix; use `IntegrityChecker` HMAC if you need authenticity with a shared secret |
+| **Shared vault required** for long prompts | Both agents must reach the same backend with correct ACLs |
+| **Custom backends** | Must implement `retrieve_with_checksum` for full binding |
+| **Demo HTTP “capsule bus”** | Not in this package — if you run one, add auth, size limits, and avoid public list/open yourself |
 
 ### Recommended agent pattern
 
@@ -554,7 +556,7 @@ Core Functionality Tests:
 ✓ Reject invalid types
 [... 24 more tests ...]
 
-Test Results: 27/27 passed
+Test Results: 81 passed
 ======================================================================
 ```
 

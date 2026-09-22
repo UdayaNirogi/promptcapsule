@@ -3,6 +3,6 @@
 from .core import CapsuleResult, IntegrityError, PromptCapsule
 from .integrity import IntegrityChecker
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __author__ = "Udaya Nirogi"
 __all__ = ["PromptCapsule", "CapsuleResult", "IntegrityChecker", "IntegrityError"]

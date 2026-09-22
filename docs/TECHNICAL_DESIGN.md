@@ -1,6 +1,6 @@
 # Technical Design Document — PromptCapsule
 
-**Version:** 0.1.4  
+**Version:** 0.1.5  
 **Audience:** C-batch / technical review  
 **Repository:** https://github.com/UdayaNirogi/promptcapsule  
 **Package:** `pip install promptcapsule`
@@ -53,7 +53,7 @@ Agent A                         shared channel                    Agent B
 
 - No confidentiality by default (integrity only).
 - Vault handoff fails if Agent B cannot reach the same store.
-- Key length is backend-specific. **27+** in project docs means **test cases**, not capsule size.
+- Key length is backend-specific. The suite currently has **81 automated tests**.
 
 ---
 
@@ -76,7 +76,7 @@ Agent A                         shared channel                    Agent B
 | `INLINE_THRESHOLD` | **500 bytes** (UTF-8) | Practical bound for portable inline payloads |
 | `COMPRESSION_LEVEL` | **9** (zlib max) | Favor size over CPU for infrequent packaging |
 | `MAX_PROMPT_SIZE` / `MAX_DECOMPRESSED_SIZE` | **10 MiB** | DoS / zip-bomb guards (0.1.2+) |
-| Checksum | **SHA-256**, first **8 hex** chars in capsule | Integrity signal — **not** a MAC (F09) |
+| Checksum | **SHA-256**, first **8 hex** chars in capsule | Integrity signal — **not** a MAC |
 | Capsule prefix | `cap_` | Easy format detection |
 | Inline marker | `cap_i_<checksum8>_<base85>` | Self-contained; Base85 must round-trip (0.1.4) |
 | Vault marker | `cap_v_<checksum8>_<backend_key>` | Opaque key; bind failure redacts text (0.1.4) |
@@ -93,7 +93,44 @@ Agent A                         shared channel                    Agent B
 
 **Interpretation:** Inline mode packages small prompts for portability (size may not shrink much). Vault mode shrinks the *shareable handle* to a short backend key (length depends on backend naming—not a fixed magic number) while the full text lives in storage.
 
-**Note:** **27+** refers to **automated test cases** in the suite—not the character length of vault capsules.
+**Note:** The automated suite is **81 tests** (pytest). Older “27” figures referred to an earlier core-only count.
+
+---
+
+## 4.1 Limitations (operational)
+
+| Limit | Value |
+|-------|-------|
+| Inline mode max | **500 bytes** UTF-8 |
+| Max compress / capsule / zlib expand | **10 MiB** each |
+| Capsule checksum | **8 hex** chars only |
+
+## 4.2 Security fixes shipped (0.1.2–0.1.4)
+
+| Area | What changed |
+|------|----------------|
+| Fail-closed decompress | Default `strict=True` raises `IntegrityError` |
+| Checksum prefix | Empty / short / non-hex prefixes rejected |
+| Zip bomb | Decompress expansion capped at 10 MiB |
+| Compress DoS | Prompt size capped at 10 MiB |
+| Vault keys | Unguessable (`secrets.token_urlsafe`) |
+| Vault key swap | Binding + empty text on failure (even if `strict=False`) |
+| Inline malleability | Base85 round-trip rejects trailing junk |
+| S3 retrieve | Prefix enforcement; path `..` blocked |
+| Gist retrieve | Owner required by default; optional allowlist |
+| HMAC helper | `verify_signature` no longer raises `NameError` |
+
+## 4.3 Still open / out of scope
+
+| Item | Status |
+|------|--------|
+| Encryption of capsules or vault payloads | **Not provided** — confidentiality is the caller’s / vault ACL problem |
+| Agent authentication / authorization | **Not provided** — no API keys or mTLS in the library |
+| Full MAC in capsule format | **Not provided** — 8-hex SHA-256 prefix only; optional HMAC via `IntegrityChecker` |
+| Demo HTTP capsule bus (auth, list disclosure, body limits) | **Out of package** — fix separately if you run a bus |
+| Guaranteed size reduction for short high-entropy prompts | **Not guaranteed** (inline may grow slightly) |
+
+Internal security-review codes (e.g. “F07”) are tracked only under `securityReview/` for auditors — they are **not** part of the public API or required PyPI documentation.
 
 ---
 
@@ -204,12 +241,13 @@ assert result.verified and result.text == prompt
 
 ---
 
-## 10. Non-Goals (v0.1)
+## 10. Non-Goals (current)
 
 - Semantic / lossy token compression  
 - End-to-end encryption of capsule payloads  
 - Multi-tenant access control inside the library (delegated to backends)  
 - Guaranteeing size reduction in inline mode for high-entropy short strings  
+- Shipping a networked “capsule bus” with auth  
 
 ---
 
@@ -217,9 +255,9 @@ assert result.verified and result.text == prompt
 
 | Item | Status |
 |------|--------|
-| Unit / integration tests | 27+ tests via `run_tests.py` / pytest |
-| Security scan (Bandit) | 0 high-severity findings in core |
-| Distribution | PyPI `promptcapsule` 0.1.0 |
+| Automated tests | **81** passed (`pytest tests/`) |
+| Security regressions | Included in `tests/test_security.py` |
+| Distribution | PyPI `promptcapsule` **0.1.5** (docs) / **0.1.4** (hardening) |
 | License | MIT |
 
 ---
