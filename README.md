@@ -2,6 +2,8 @@
 
 > Open-source prompt compression & retrieval library that solves a real problem for developers and AI enthusiasts.
 
+![PromptCapsule Infographic](assets/promptcapsule_infographic.png)
+
 ## Overview
 
 **PromptCapsule** is a generic, reusable, open-source tool for compressing and reliably reconstructing LLM prompts. It bridges the gap between short-prompt compression and long-prompt storage, giving developers an honest, transparent way to share, version-control, and manage their AI prompts.
