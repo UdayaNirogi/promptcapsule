@@ -37,6 +37,7 @@ Scope: **library** first (bus is separate / not in this repo)
 | P2 S3 prefix check | **Done** |
 | Demo bus | Out of scope (not in repo) |
 | PyPI upload of 0.1.2 | **Published** — https://pypi.org/project/promptcapsule/0.1.2/ |
+| PyPI upload of 0.1.3 | **Published** — https://pypi.org/project/promptcapsule/0.1.3/ |
 
 ## Implemented (v0.1.2)
 

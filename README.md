@@ -24,11 +24,11 @@ When people talk about "prompt compression," they usually mean two fundamentally
 PromptCapsule uses a **hybrid approach**:
 
 ```
-Short prompts (<500 chars):
+Short prompts (≤500 bytes UTF-8):
   INPUT PROMPT → ZLIB COMPRESS → BASE85 ENCODE → Portable capsule string
   (self-contained, no storage needed)
 
-Long prompts (>500 chars):
+Long prompts (>500 bytes):
   INPUT PROMPT → STORE IN VAULT (SQLite, GitHub Gist, S3) → Generate short hash key
   (retrieves from configured backend)
 ```
@@ -49,6 +49,70 @@ result = pc.decompress(capsule, vault_backend=vault)  # strict=True by default
 - Use `strict=False` only if you intentionally want plaintext with `verified=False` (legacy).
 
 This is a use of the existing API, not a separate agent protocol, and not encryption. The project includes **27+ automated test cases** (plus security regressions) — that number is test coverage, not capsule length.
+
+---
+
+## What's new in 0.1.3 (security & limits documentation)
+
+Version **0.1.2** hardened the library against the issues in our security review. **0.1.3** publishes the same protections with clear PyPI/README documentation of **limits**, **what was fixed**, and **what is still out of scope**.
+
+### Size & operational limits
+
+| Limit | Value | Behavior |
+|-------|-------|----------|
+| Inline vs vault threshold | **500 bytes** (UTF-8) | ≤500 → inline capsule; >500 → requires a vault backend |
+| Max prompt on compress | **10 MiB** (`MAX_PROMPT_SIZE`) | Larger inputs raise `ValueError` |
+| Max capsule string size | **10 MiB** | Oversized capsules rejected on decompress |
+| Max zlib expansion | **10 MiB** (`MAX_DECOMPRESSED_SIZE`) | Blocks zip/zlib bombs |
+| Checksum in capsule | **8 hex chars** (SHA-256 prefix) | Integrity signal, **not** a MAC / not encryption |
+| Vault keys | Unguessable (`secrets.token_urlsafe`) | Not sequential counters |
+
+```python
+from promptcapsule import PromptCapsule, IntegrityError
+
+pc = PromptCapsule()
+print(pc.INLINE_THRESHOLD)       # 500
+print(pc.MAX_PROMPT_SIZE)        # 10485760
+print(pc.MAX_DECOMPRESSED_SIZE)  # 10485760
+```
+
+### Security issues addressed (library)
+
+| Issue | Status | Mitigation |
+|-------|--------|------------|
+| Integrity fail-open (plaintext returned when checksum fails) | **Fixed** | `decompress(strict=True)` default raises `IntegrityError` |
+| Empty checksum prefix → `verified=True` (`startswith("")`) | **Fixed** | Require exactly 8 lowercase hex chars |
+| zlib bomb / unbounded decompress | **Fixed** | Bounded decompress (3.11+ `max_length` or `decompressobj`) |
+| Huge compress DoS | **Fixed** | `MAX_PROMPT_SIZE` enforced |
+| Predictable vault keys (`mem_00000001`, …) | **Fixed** | Cryptographic random keys |
+| Vault key swap returning another agent’s text | **Hardened** | Fail-closed + key↔stored-checksum binding |
+| S3 key from capsule (confused deputy) | **Hardened** | Refuse keys outside configured `prefix` |
+| HMAC helper `NameError` | **Fixed** | `hmac` imported for `verify_signature` |
+
+### Remaining limitations (read carefully)
+
+PromptCapsule is **packaging + retrieval**, not a security boundary by itself:
+
+- **Not encryption.** Capsules and vault contents are readable to anyone who can obtain them or access the vault.
+- **Not authentication.** There is no built-in agent identity, API keys, or mTLS in the library.
+- **8-hex checksum is truncated SHA-256**, not an HMAC. Use `IntegrityChecker` HMAC helpers (and your own secrets) if you need authenticity beyond integrity.
+- **Vault handoffs require a shared backend** both agents can reach, with correct ACLs (file perms, private gists, IAM).
+- **Custom backends** must implement `retrieve_with_checksum` for full key↔checksum binding.
+- **Demo “capsule bus” HTTP services** (if you build one) need their own auth, rate limits, and body size caps — that is **outside** this package.
+
+### Recommended agent pattern
+
+```python
+from promptcapsule import PromptCapsule, IntegrityError
+
+pc = PromptCapsule()
+try:
+    result = pc.decompress(capsule, vault_backend=vault)  # strict=True
+except IntegrityError:
+    raise  # do not act on untrusted / tampered prompts
+
+# only then use result.text
+```
 
 ---
 
