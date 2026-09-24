@@ -124,9 +124,9 @@ Effort: **S** ≤1 day · **M** 2–5 days · **L** 1–2 weeks · **XL** multi-
 | A1 | Wire **HMAC-SHA256** (or full SHA-256) into capsule format as opt-in `signed=True` / env secret | P0 | M | **OPEN** | Fixes F09; default stays compatible; document migration |
 | A2 | Reject **trailing junk** after Base85 / zlib (strict parse) | P0 | S | **PARTIAL** (0.1.4) | Round-trip helps; still need reject zlib unused tail / harden `_EXTRA` |
 | A3 | **Gist allowlist** + owner check | P0 | S | **DONE** (0.1.4) | Closes F11 — verified 0.1.5 |
-| A4 | Deprecate / warn loudly on `strict=False` in docs + runtime warning | P1 | S | **OPEN** | Misuse reduction (plaintext path for inline still exists) |
+| A4 | Deprecate / warn loudly on `strict=False` in docs + runtime warning | P1 | S | **DONE** (0.1.6) | Runtime DeprecationWarning added; docstring updated |
 | A5 | Constant-time compare for checksums where applicable | P1 | S | **OPEN** | Defense in depth (HMAC path already uses `compare_digest`) |
-| A6 | Published **threat model** (TRUST.md): what capsule guarantees / does not | P0 | S | **OPEN** | Honest marketing; security reviewers |
+| A6 | Published **threat model** (TRUST.md): what capsule guarantees / does not | P0 | S | **DONE** (0.1.6) | 450-line comprehensive threat model published |
 | A7 | Capsule **canonicalization** (normalize encoding, NFC, newline policy) | P2 | M | **OPEN** | Reproducible capsules across platforms |
 | A8 | Optional **AEAD encryption** at rest in vault (key from env) | P2 | L | **OPEN** | New feature; still not transport auth |
 | A9 | Vault key-swap empty text even if `strict=False` | P0 | S | **DONE** (0.1.4) | Closes F07 — verified 0.1.5 |
@@ -197,7 +197,7 @@ Effort: **S** ≤1 day · **M** 2–5 days · **L** 1–2 weeks · **XL** multi-
 
 | ID | Item | Pri | Effort | Status | Notes / acceptance |
 |----|------|-----|--------|--------|--------------------|
-| F1 | Expand security regression suite (keep verify/adversarial scripts in CI) | P0 | S | **OPEN** | Add `verify_fixes_0_1_5.py` to CI |
+| F1 | Expand security regression suite (keep verify/adversarial scripts in CI) | P0 | S | **DONE** (0.1.6) | GitHub Actions CI with security tests across Python 3.9-3.12 |
 | F2 | Property-based tests (Hypothesis) for parse/round-trip | P1 | M | **OPEN** | Robustness |
 | F3 | mypy strict + typed public API | P1 | S | **OPEN** | Library hygiene |
 | F4 | Performance budget tests (p95 decompress) | P2 | S | **OPEN** | Catch accidental O(n²) |
