@@ -1,4 +1,5 @@
 # PromptCapsule 📦
+### Pass the prompt, not the payload.
 
 > Lossless prompt capsules for sharing, retrieval, and agent-to-agent handoff
 > (v0.1.6 — CLI, trust model, CI/CD, fail-closed integrity).
