@@ -1,8 +1,11 @@
 # PromptCapsule 📦
 ### Pass the prompt, not the payload.
 
-> Lossless prompt capsules for sharing, retrieval, and agent-to-agent handoff
-> (v0.1.6 — CLI, trust model, CI/CD, fail-closed integrity).
+>Lossless prompt capsules for agent-to-agent handoff.
+>Inline when small · vault-backed when large · fail-closed integrity by default.
+
+>```bash
+>pip install promptcapsule
 
 ![PromptCapsule Infographic](assets/promptcapsule_infographic.png)
 
