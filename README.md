@@ -1,7 +1,7 @@
 # PromptCapsule 📦
 
 > Lossless prompt capsules for sharing, retrieval, and agent-to-agent handoff
-> (v0.1.5 — fail-closed integrity, size limits, vault & Gist hardening).
+> (v0.1.6 — CLI, trust model, CI/CD, fail-closed integrity).
 
 ![PromptCapsule Infographic](assets/promptcapsule_infographic.png)
 
@@ -49,7 +49,7 @@ result = pc.decompress(capsule, vault_backend=vault)  # strict=True by default
 - **Vault** (`cap_v_…`): both agents use the same backend (SQLite, GitHub Gist, or S3). The long prompt stays in the vault; only a short key moves between agents.
 - Use `strict=False` only if you intentionally want plaintext with `verified=False` (legacy).
 
-This is a use of the existing API, not a separate agent protocol, and not encryption. The project includes **81 automated tests** (core, backends, integrity, integration, and security regressions).
+This is a use of the existing API, not a separate agent protocol, and not encryption. The project includes **96 automated tests** (core, backends, integrity, integration, security regressions, and CLI).
 
 ---
 
@@ -386,7 +386,7 @@ Requires: `pip install promptcapsule[vault]`
 
 ## Command-Line Interface
 
-**New in v0.1.5:** PromptCapsule now includes a full-featured CLI!
+**New in v0.1.6:** PromptCapsule now includes a full-featured CLI!
 
 ```bash
 # Pack a prompt into a capsule
