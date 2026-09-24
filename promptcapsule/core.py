@@ -3,6 +3,7 @@
 import base64
 import hashlib
 import re
+import warnings
 import zlib
 from dataclasses import dataclass
 from typing import NamedTuple, Optional
@@ -100,7 +101,21 @@ class PromptCapsule:
             vault_backend: Required for vault capsules
             strict: If True (default), raise IntegrityError when verification fails
                     instead of returning plaintext with verified=False.
+                    
+        Warning:
+            Using strict=False is discouraged and may be deprecated in a future release.
+            Fail-closed verification (strict=True) is the recommended practice for
+            agent-to-agent handoff and security-sensitive applications.
         """
+        if not strict:
+            warnings.warn(
+                "Using strict=False is discouraged. Fail-closed verification (strict=True) "
+                "is recommended for agent handoffs and security-sensitive applications. "
+                "This parameter may be deprecated in a future release.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+        
         if not isinstance(capsule, str):
             raise TypeError("Capsule must be a string")
 

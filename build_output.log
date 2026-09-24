@@ -1,0 +1,254 @@
+[93mWARNING[0m Both NO_COLOR and FORCE_COLOR environment variables are set, disabling color
+* Creating isolated environment: venv+pip...
+* Installing packages in isolated environment:
+  - setuptools>=65.0
+  - wheel
+* Getting build dependencies for sdist...
+running egg_info
+writing promptcapsule.egg-info/PKG-INFO
+writing dependency_links to promptcapsule.egg-info/dependency_links.txt
+writing requirements to promptcapsule.egg-info/requires.txt
+writing top-level names to promptcapsule.egg-info/top_level.txt
+reading manifest file 'promptcapsule.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'promptcapsule.egg-info/SOURCES.txt'
+WARNING `project.license` as a TOML table is deprecated
+!!
+
+        ********************************************************************************
+        Please use a simple string containing a SPDX expression for `project.license`. You can also use `project.license-files`. (Both options available on setuptools>=77.0.0).
+
+        By 2027-Feb-18, you need to update your project and remove deprecated calls
+        or your builds will no longer be supported.
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+WARNING License classifiers are deprecated.
+!!
+
+        ********************************************************************************
+        Please consider removing the following classifiers in favor of a SPDX license expression:
+
+        License :: OSI Approved :: MIT License
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+WARNING License classifiers are deprecated.
+!!
+
+        ********************************************************************************
+        Please consider removing the following classifiers in favor of a SPDX license expression:
+
+        License :: OSI Approved :: MIT License
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+* Building sdist...
+running sdist
+running egg_info
+writing promptcapsule.egg-info/PKG-INFO
+writing dependency_links to promptcapsule.egg-info/dependency_links.txt
+writing requirements to promptcapsule.egg-info/requires.txt
+writing top-level names to promptcapsule.egg-info/top_level.txt
+reading manifest file 'promptcapsule.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'promptcapsule.egg-info/SOURCES.txt'
+running check
+creating promptcapsule-0.1.0
+creating promptcapsule-0.1.0/promptcapsule
+creating promptcapsule-0.1.0/promptcapsule.egg-info
+creating promptcapsule-0.1.0/tests
+copying files to promptcapsule-0.1.0...
+copying LICENSE -> promptcapsule-0.1.0
+copying README.md -> promptcapsule-0.1.0
+copying pyproject.toml -> promptcapsule-0.1.0
+copying promptcapsule/__init__.py -> promptcapsule-0.1.0/promptcapsule
+copying promptcapsule/backends.py -> promptcapsule-0.1.0/promptcapsule
+copying promptcapsule/core.py -> promptcapsule-0.1.0/promptcapsule
+copying promptcapsule/integrity.py -> promptcapsule-0.1.0/promptcapsule
+copying promptcapsule.egg-info/PKG-INFO -> promptcapsule-0.1.0/promptcapsule.egg-info
+copying promptcapsule.egg-info/SOURCES.txt -> promptcapsule-0.1.0/promptcapsule.egg-info
+copying promptcapsule.egg-info/dependency_links.txt -> promptcapsule-0.1.0/promptcapsule.egg-info
+copying promptcapsule.egg-info/requires.txt -> promptcapsule-0.1.0/promptcapsule.egg-info
+copying promptcapsule.egg-info/top_level.txt -> promptcapsule-0.1.0/promptcapsule.egg-info
+copying tests/test_backends.py -> promptcapsule-0.1.0/tests
+copying tests/test_core.py -> promptcapsule-0.1.0/tests
+copying tests/test_integration.py -> promptcapsule-0.1.0/tests
+copying tests/test_integrity.py -> promptcapsule-0.1.0/tests
+copying promptcapsule.egg-info/SOURCES.txt -> promptcapsule-0.1.0/promptcapsule.egg-info
+Writing promptcapsule-0.1.0/setup.cfg
+Creating tar archive
+removing 'promptcapsule-0.1.0' (and everything under it)
+WARNING `project.license` as a TOML table is deprecated
+!!
+
+        ********************************************************************************
+        Please use a simple string containing a SPDX expression for `project.license`. You can also use `project.license-files`. (Both options available on setuptools>=77.0.0).
+
+        By 2027-Feb-18, you need to update your project and remove deprecated calls
+        or your builds will no longer be supported.
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+WARNING License classifiers are deprecated.
+!!
+
+        ********************************************************************************
+        Please consider removing the following classifiers in favor of a SPDX license expression:
+
+        License :: OSI Approved :: MIT License
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+WARNING License classifiers are deprecated.
+!!
+
+        ********************************************************************************
+        Please consider removing the following classifiers in favor of a SPDX license expression:
+
+        License :: OSI Approved :: MIT License
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+* Building wheel from sdist
+* Creating isolated environment: venv+pip...
+* Installing packages in isolated environment:
+  - setuptools>=65.0
+  - wheel
+* Getting build dependencies for wheel...
+running egg_info
+writing promptcapsule.egg-info/PKG-INFO
+writing dependency_links to promptcapsule.egg-info/dependency_links.txt
+writing requirements to promptcapsule.egg-info/requires.txt
+writing top-level names to promptcapsule.egg-info/top_level.txt
+reading manifest file 'promptcapsule.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'promptcapsule.egg-info/SOURCES.txt'
+WARNING `project.license` as a TOML table is deprecated
+!!
+
+        ********************************************************************************
+        Please use a simple string containing a SPDX expression for `project.license`. You can also use `project.license-files`. (Both options available on setuptools>=77.0.0).
+
+        By 2027-Feb-18, you need to update your project and remove deprecated calls
+        or your builds will no longer be supported.
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+WARNING License classifiers are deprecated.
+!!
+
+        ********************************************************************************
+        Please consider removing the following classifiers in favor of a SPDX license expression:
+
+        License :: OSI Approved :: MIT License
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+WARNING License classifiers are deprecated.
+!!
+
+        ********************************************************************************
+        Please consider removing the following classifiers in favor of a SPDX license expression:
+
+        License :: OSI Approved :: MIT License
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+* Building wheel...
+running bdist_wheel
+running build
+running build_py
+creating build/lib/promptcapsule
+copying promptcapsule/__init__.py -> build/lib/promptcapsule
+copying promptcapsule/core.py -> build/lib/promptcapsule
+copying promptcapsule/backends.py -> build/lib/promptcapsule
+copying promptcapsule/integrity.py -> build/lib/promptcapsule
+running egg_info
+writing promptcapsule.egg-info/PKG-INFO
+writing dependency_links to promptcapsule.egg-info/dependency_links.txt
+writing requirements to promptcapsule.egg-info/requires.txt
+writing top-level names to promptcapsule.egg-info/top_level.txt
+reading manifest file 'promptcapsule.egg-info/SOURCES.txt'
+adding license file 'LICENSE'
+writing manifest file 'promptcapsule.egg-info/SOURCES.txt'
+installing to build/bdist.macosx-10.9-universal2/wheel
+running install
+running install_lib
+creating build/bdist.macosx-10.9-universal2/wheel
+creating build/bdist.macosx-10.9-universal2/wheel/promptcapsule
+copying build/lib/promptcapsule/__init__.py -> build/bdist.macosx-10.9-universal2/wheel/./promptcapsule
+copying build/lib/promptcapsule/core.py -> build/bdist.macosx-10.9-universal2/wheel/./promptcapsule
+copying build/lib/promptcapsule/backends.py -> build/bdist.macosx-10.9-universal2/wheel/./promptcapsule
+copying build/lib/promptcapsule/integrity.py -> build/bdist.macosx-10.9-universal2/wheel/./promptcapsule
+running install_egg_info
+Copying promptcapsule.egg-info to build/bdist.macosx-10.9-universal2/wheel/./promptcapsule-0.1.0-py3.9.egg-info
+running install_scripts
+creating build/bdist.macosx-10.9-universal2/wheel/promptcapsule-0.1.0.dist-info/WHEEL
+creating '/Users/udayanirogi/Documents/Ideas/Projects/PromptCapsule/dist/.tmp-oqob62kv/promptcapsule-0.1.0-py3-none-any.whl' and adding 'build/bdist.macosx-10.9-universal2/wheel' to it
+adding 'promptcapsule/__init__.py'
+adding 'promptcapsule/backends.py'
+adding 'promptcapsule/core.py'
+adding 'promptcapsule/integrity.py'
+adding 'promptcapsule-0.1.0.dist-info/licenses/LICENSE'
+adding 'promptcapsule-0.1.0.dist-info/METADATA'
+adding 'promptcapsule-0.1.0.dist-info/WHEEL'
+adding 'promptcapsule-0.1.0.dist-info/top_level.txt'
+adding 'promptcapsule-0.1.0.dist-info/RECORD'
+removing build/bdist.macosx-10.9-universal2/wheel
+WARNING `project.license` as a TOML table is deprecated
+!!
+
+        ********************************************************************************
+        Please use a simple string containing a SPDX expression for `project.license`. You can also use `project.license-files`. (Both options available on setuptools>=77.0.0).
+
+        By 2027-Feb-18, you need to update your project and remove deprecated calls
+        or your builds will no longer be supported.
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+WARNING License classifiers are deprecated.
+!!
+
+        ********************************************************************************
+        Please consider removing the following classifiers in favor of a SPDX license expression:
+
+        License :: OSI Approved :: MIT License
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+WARNING License classifiers are deprecated.
+!!
+
+        ********************************************************************************
+        Please consider removing the following classifiers in favor of a SPDX license expression:
+
+        License :: OSI Approved :: MIT License
+
+        See https://packaging.python.org/en/latest/guides/writing-pyproject-toml/#license for details.
+        ********************************************************************************
+
+!!
+Successfully built promptcapsule-0.1.0.tar.gz and promptcapsule-0.1.0-py3-none-any.whl

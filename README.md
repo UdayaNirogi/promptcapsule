@@ -1,7 +1,7 @@
 # PromptCapsule 📦
 
 > Lossless prompt capsules for sharing, retrieval, and agent-to-agent handoff
-> (v0.1.4 — fail-closed integrity, size limits, vault & Gist hardening).
+> (v0.1.5 — fail-closed integrity, size limits, vault & Gist hardening).
 
 ![PromptCapsule Infographic](assets/promptcapsule_infographic.png)
 
@@ -58,6 +58,15 @@ This is a use of the existing API, not a separate agent protocol, and not encryp
 - Public docs now state **81 automated tests** (not “27”).
 - Security write-up uses plain language (no internal finding codes like F07/F10).
 - Limits, fixed issues, and remaining open limitations are listed clearly for PyPI readers.
+
+## What's new in 0.1.5 (documentation clarity)
+
+**v0.1.5** (2026-09-23):
+- Public docs now state **81 automated tests** (not "27").
+- Clarified **limitations** (not encryption, not auth, 8-hex checksum limits).
+- Removed internal security finding IDs (F07, F10, F13) from public docs.
+- Technical design now documents **fixed vs still-open issues**.
+- All infographics updated with correct metrics.
 
 ## What's new in 0.1.4 (follow-up hardening)
 
@@ -377,19 +386,42 @@ Requires: `pip install promptcapsule[vault]`
 
 ## Command-Line Interface
 
+**New in v0.1.5:** PromptCapsule now includes a full-featured CLI!
+
 ```bash
-# Compress a prompt
-echo "Your prompt here" | promptcapsule compress
+# Pack a prompt into a capsule
+echo "Your prompt here" | promptcapsule pack --file -
 # Output: cap_i_a1b2c3d4_...
 
-# Decompress a capsule
-promptcapsule decompress "cap_i_a1b2c3d4_..."
+# Pack from a file
+promptcapsule pack --file prompt.txt
+
+# Pack with vault backend (for long prompts)
+promptcapsule pack --file long_prompt.txt --vault prompts.db
+
+# Unpack a capsule
+promptcapsule unpack --capsule "cap_i_a1b2c3d4_..."
 # Output: Your prompt here
 
-# With vault backend
-promptcapsule compress --vault sqlite:prompts.db < prompt.txt
-promptcapsule decompress --vault sqlite:prompts.db "cap_v_..."
+# Unpack from file with vault
+promptcapsule unpack --file capsule.txt --vault prompts.db
+
+# Verify capsule integrity
+promptcapsule verify --capsule "cap_i_a1b2c3d4_..." --verbose
+
+# Inspect capsule metadata
+promptcapsule inspect --capsule "cap_i_a1b2c3d4_..." --json
+
+# Get help
+promptcapsule --help
+promptcapsule pack --help
 ```
+
+**Available Commands:**
+- `pack` - Pack a prompt into a capsule
+- `unpack` - Unpack a capsule to retrieve the original prompt
+- `verify` - Verify capsule integrity without printing contents
+- `inspect` - Show capsule metadata (mode, checksum, size)
 
 ---
 

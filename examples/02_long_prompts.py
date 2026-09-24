@@ -1,6 +1,6 @@
-"""Example 2: Working with long prompts using vault backends."""
+"""Example 2: Working with long prompts using vault backends (v0.1.5)."""
 
-from promptcapsule import PromptCapsule
+from promptcapsule import PromptCapsule, IntegrityError
 from promptcapsule.backends import InMemoryBackend, SQLiteBackend
 import os
 
@@ -78,11 +78,16 @@ print(f"Capsule: {capsule_memory}")
 print(f"Capsule size: {len(capsule_memory)} characters")
 print()
 
-result_memory = pc.decompress(capsule_memory, vault_backend=memory_backend)
-assert result_memory.text == long_prompt
-print(f"✓ Decompressed successfully from memory backend")
-print(f"  Verified: {result_memory.verified}")
-print(f"  Compression ratio: {len(capsule_memory) / result_memory.original_size:.2%}")
+# Decompress with fail-closed integrity (default strict=True)
+try:
+    result_memory = pc.decompress(capsule_memory, vault_backend=memory_backend)
+    assert result_memory.text == long_prompt
+    print(f"✓ Decompressed successfully from memory backend")
+    print(f"  Verified: {result_memory.verified}")
+    print(f"  Compression ratio: {len(capsule_memory) / result_memory.original_size:.2%}")
+except IntegrityError as e:
+    print(f"❌ Integrity verification failed: {e}")
+    raise
 print()
 
 # Example 2: Using SQLiteBackend (good for persistent storage)

@@ -44,6 +44,9 @@ vault = [
 "Homepage" = "https://github.com/UdayaNirogi/promptcapsule"
 "Bug Tracker" = "https://github.com/UdayaNirogi/promptcapsule/issues"
 
+[project.scripts]
+promptcapsule = "promptcapsule.cli:main"
+
 [tool.setuptools]
 packages = ["promptcapsule"]
 
@@ -59,4 +62,4 @@ disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --cov=promptcapsule --cov-report=html --cov-report=term-missing"
+addopts = "-v"

@@ -1,0 +1,32 @@
+/Users/udayanirogi/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO     Using configuration from /Users/udayanirogi/.pypirc                    
+Uploading distributions to https://upload.pypi.org/legacy/
+INFO     dist/promptcapsule-0.1.0-py3-none-any.whl (12.7 KB)                    
+INFO     dist/promptcapsule-0.1.0.tar.gz (22.8 KB)                              
+INFO     username set by command options                                        
+INFO     password set from config file                                          
+INFO     username: __token__                                                    
+INFO     password: <hidden>                                                     
+Uploading promptcapsule-0.1.0-py3-none-any.whl
+100% ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 34.2/34.2 kB • 00:00 • 89.5 MB/s
+
+INFO     Response from https://upload.pypi.org/legacy/:                         
+         403 Forbidden                                                          
+INFO     <html>                                                                 
+          <head>                                                                
+           <title>403 Invalid or non-existent authentication information. See   
+         https://pypi.org/help/#invalid-auth for more information.</title>      
+          </head>                                                               
+          <body>                                                                
+           <h1>403 Invalid or non-existent authentication information. See      
+         https://pypi.org/help/#invalid-auth for more information.</h1>         
+           Access was denied to this resource.<br/><br/>                        
+         Invalid or non-existent authentication information. See                
+         https://pypi.org/help/#invalid-auth for more information.              
+                                                                                
+                                                                                
+          </body>                                                               
+         </html>                                                                
+ERROR    HTTPError: 403 Forbidden from https://upload.pypi.org/legacy/          
+         Forbidden                                                              
