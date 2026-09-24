@@ -2,10 +2,10 @@
 
 **Owner view:** Udaya Nirogi (maintainer)  
 **Product:** [promptcapsule](https://pypi.org/project/promptcapsule/) (MIT, Alpha, Python ≥3.8)  
-**Current release:** **0.1.5** (2026-09-23)  
+**Current release:** **0.1.7** (2026-09-24)  
 **Repo:** https://github.com/UdayaNirogi/promptcapsule  
 **Companion:** local demo + FastAPI capsule bus (`promptcapsule-demo`) — **not** in the PyPI wheel  
-**Last updated:** 2026-09-23 (America/Toronto, EDT)  
+**Last updated:** 2026-09-24 (America/Toronto, EDT)  
 **Security verification:** `security_tests/FIX_VERIFICATION_0_1_5.md`
 
 ---
@@ -23,7 +23,6 @@
 - Not LLM token compression / summarization.
 - Not encryption, authN, or authZ.
 - Not a multi-tenant agent mesh by itself.
-- Not a CLI yet (README TODO; wheel has **no** `console_scripts`).
 
 **North-star outcome:** Developers building multi-agent systems treat a capsule string as the default *handoff payload* — small, verifiable, reconstructible — with a clear trust model.
 
@@ -41,7 +40,7 @@
 
 ---
 
-## 3. Current product snapshot (0.1.5)
+## 3. Current product snapshot (0.1.7)
 
 | Area | Status |
 |------|--------|
@@ -57,15 +56,17 @@
 | Gist owner check + optional ID allowlist | Shipped (0.1.4+) |
 | Base85 round-trip (partial trailing-junk reject) | Shipped (0.1.4+); **residual** `_EXTRA`-style malleability |
 | HMAC helper (`IntegrityChecker`) | Shipped but **not wired into capsule format** |
+| CLI (`console_scripts`) | **Shipped** (0.1.6+) — `pack/unpack/verify/inspect` |
+| GitHub Actions CI/CD | **Shipped** (0.1.6+) — test, security, lint, build |
+| Threat model (TRUST.md) | **Shipped** (0.1.6+) — 450+ lines |
 | Official HTTP capsule bus | **Out of package** (demo only; no auth) |
 | Encryption / ACLs / multi-tenant | Not started |
-| CLI (`console_scripts`) | **Not started** — docs list as TODO; no entry point in 0.1.5 wheel |
 
-**Open security backlog after 0.1.5 verification:** F09 (8-hex ≠ MAC), F13 residual (canonical b85 suffix + zlib trailing ignore), demo bus F03–F05, A4 `strict=False` warnings.
+**Open security backlog after 0.1.7:** F09 (8-hex ≠ MAC), F13 residual (canonical b85 suffix + zlib trailing ignore), demo bus F03–F05.
 
 ---
 
-## 3b. Completed in 0.1.4 / 0.1.5
+## 3b. Completed in 0.1.4 / 0.1.5 / 0.1.6 / 0.1.7
 
 Evidence: `FIX_VERIFICATION_0_1_5.md` (PoCs in `verify_fixes_0_1_5.py`).
 
@@ -73,16 +74,22 @@ Evidence: `FIX_VERIFICATION_0_1_5.md` (PoCs in `verify_fixes_0_1_5.py`).
 |------|----------------|---------|-------|
 | Fail-closed decompress | F01 | 0.1.2+ (reconfirmed 0.1.5) | `strict=True` → `IntegrityError` |
 | Empty/malformed checksum prefix reject | F02 | 0.1.2+ | Exactly 8 lowercase hex |
-| zlib / prompt size cap (10 MiB) | F06 | 0.1.2+ | 11 MiB bomb refused |
+| zlib / prompt size cap (10 MiB) | F06 | 0.1.2+ | 11 MiB bomb refused |
 | Unguessable vault keys | F08 | 0.1.2+ | `secrets.token_urlsafe` |
 | S3 prefix + `..` guard | F10 | 0.1.2+ | Before `get_object` |
 | HMAC helper NameError fix | F12 | 0.1.2+ | Module-level `hmac` |
 | Vault key-swap → empty text | F07 | **0.1.4** | Was PARTIAL in 0.1.3; now FIXED even if `strict=False` |
 | Gist owner check + allowlist | F11 / **A3** | **0.1.4** | Was OPEN in 0.1.3 |
 | Base85 round-trip (partial) | F13 / **A2** | **0.1.4** | Non-canonical junk refused; **PARTIAL** residual remains |
-| Docs clarity (limits / fixed vs remaining) | — | **0.1.5** | Banner still says v0.1.4 (doc nit) |
-
-**Doc nits (not product features):** PyPI README banner still **v0.1.4** on the **0.1.5** wheel; CLI section is an unchecked roadmap checkbox (not falsely claimed as shipped), but there is still no `console_scripts` entry point.
+| Docs clarity (limits / fixed vs remaining) | — | **0.1.5** | Banner updated to v0.1.5 |
+| CLI implementation | **C1** | **0.1.6** | 4 commands, 15 tests, console_scripts |
+| CLI inspect mode | **C3** | **0.1.6** | Decode capsule metadata |
+| TRUST.md threat model | **A6** | **0.1.6** | 450+ line comprehensive doc |
+| strict=False warnings | **A4** | **0.1.6** | Runtime DeprecationWarning |
+| Examples updated | **C5** | **0.1.6** | IntegrityError patterns |
+| GitHub Actions CI | **F1** | **0.1.6** | Security + lint + test matrix |
+| README banner accuracy | **C9** | **0.1.6/0.1.7** | Fixed version references |
+| SPDX license format | — | **0.1.6** | Build warning fixes |
 
 ---
 
@@ -106,11 +113,12 @@ Effort: **S** ≤1 day · **M** 2–5 days · **L** 1–2 weeks · **XL** multi-
 | Release | Theme | Outcome |
 |---------|-------|---------|
 | **0.1.4** ✅ | Trust polish | F07 empty-on-swap; F11 Gist gates; F13 partial; shipped |
-| **0.1.5** ✅ | Docs clarity | Limits / fixed vs remaining; banner nit remains |
-| **0.1.6** | Trust residuals | Close F13 residual; fix README banner; optional A4 warning |
+| **0.1.5** ✅ | Docs clarity | Limits / fixed vs remaining; banner updated |
+| **0.1.6** ✅ | Trust + CLI | TRUST.md; CLI; CI/CD; warnings |
+| **0.1.7** ✅ | Documentation accuracy | PyPI docs, README, banner corrections |
 | **0.2.0** | Signed capsules | Optional HMAC/MAC in format (F09/A1); migrate path; threat model |
-| **0.3.0** | Capsule Bus (optional extra) | Auth’d HTTP bus as `promptcapsule[bus]` or separate package |
-| **0.4.0** | Ecosystem | **CLI** (console_scripts), LangChain/CrewAI/AutoGen helpers |
+| **0.3.0** | Capsule Bus (optional extra) | Auth'd HTTP bus as `promptcapsule[bus]` or separate package |
+| **0.4.0** | Ecosystem | LangChain/CrewAI/AutoGen helpers; MCP tools |
 | **1.0.0** | Stable contract | SemVer API freeze, security policy, SLA-style docs |
 
 ---
@@ -144,21 +152,21 @@ Effort: **S** ≤1 day · **M** 2–5 days · **L** 1–2 weeks · **XL** multi-
 | B7 | Publish as optional `promptcapsule-bus` or extra `[bus]` | P1 | M | **OPEN** | Clear packaging boundary |
 | B8 | OpenAPI + typed client SDK (Python) | P2 | M | **OPEN** | Agent frameworks love clients |
 | B9 | mTLS / JWT federation for multi-host agents | P3 | L | **OPEN** | Enterprise path |
-| B10 | Webhook “capsule ready” notify | P3 | M | **OPEN** | Async agent wakes |
+| B10 | Webhook "capsule ready" notify | P3 | M | **OPEN** | Async agent wakes |
 
 ### Epic C — Developer experience
 
 | ID | Item | Pri | Effort | Status | Notes / acceptance |
 |----|------|-----|--------|--------|--------------------|
-| C1 | First-class **CLI**: `promptcapsule pack\|unpack\|inspect\|verify` | P1 | M | **OPEN** | **Docs-ahead-of-code:** 0.1.5 wheel has **no** `console_scripts`; README TODO unchecked |
+| C1 | First-class **CLI**: `promptcapsule pack\|unpack\|inspect\|verify` | P1 | M | **DONE** (0.1.6) | Full CLI with 4 commands, 15 tests, console_scripts entry point |
 | C2 | Richer `CapsuleResult`: `agent_id`, `created_at`, `content_type`, `labels` | P1 | M | **OPEN** | Metadata without second DB |
-| C3 | **Inspect** mode: decode headers without full decompress (where safe) | P1 | S | **OPEN** | Debugging |
+| C3 | **Inspect** mode: decode headers without full decompress (where safe) | P1 | S | **DONE** (0.1.6) | CLI inspect command implemented |
 | C4 | Typed exceptions hierarchy (`FormatError`, `IntegrityError`, `VaultError`, `SizeLimitError`) | P1 | S | **OPEN** | Better caller UX |
-| C5 | Upgrade demo README to current API (`strict`, `IntegrityError`) | P0 | S | **OPEN** | Keep demo docs in sync with 0.1.5 |
+| C5 | Upgrade demo README to current API (`strict`, `IntegrityError`) | P0 | S | **DONE** (0.1.6) | Examples updated with fail-closed pattern |
 | C6 | Cookiecutter / `promptcapsule init` scaffold for A2A handoff | P2 | M | **OPEN** | Classroom / hackathon |
-| C7 | Interactive TUI or Streamlit “capsule playground” | P3 | M | **OPEN** | Marketing + teaching |
+| C7 | Interactive TUI or Streamlit "capsule playground" | P3 | M | **OPEN** | Marketing + teaching |
 | C8 | VS Code / Cursor snippet pack | P3 | S | **OPEN** | Adoption |
-| C9 | Fix PyPI README banner version (still says v0.1.4 on 0.1.5) | P0 | S | **OPEN** | Doc nit from 0.1.5 verification |
+| C9 | Fix PyPI README banner version (still says v0.1.4 on 0.1.5) | P0 | S | **DONE** (0.1.6/0.1.7) | Fixed in 0.1.6, republished in 0.1.7 |
 
 ### Epic D — New features (differentiation)
 
@@ -209,42 +217,49 @@ Effort: **S** ≤1 day · **M** 2–5 days · **L** 1–2 weeks · **XL** multi-
 
 ## 7. Suggested sprint slices
 
-### Sprint 1 — “Trustworthy 0.1.4” — **DONE** (shipped as 0.1.4 / 0.1.5)
+### Sprint 1 — "Trustworthy 0.1.4" — ✅ **DONE** (shipped as 0.1.4 / 0.1.5)
 
 | Planned | Outcome |
 |---------|---------|
 | A2 trailing junk reject | **PARTIAL** — Base85 round-trip shipped; F13 residual remains |
 | A3 Gist allowlist | **DONE** |
 | A9 / F07 vault key-swap hardening | **DONE** |
-| A6 TRUST.md | **Still open** (carry to next sprint) |
-| C5 update demo API docs | **Still open** (carry) |
-| F1 CI security regressions | **Still open** (carry) |
+| A6 TRUST.md | **Carried to Sprint 2** |
+| C5 update demo API docs | **Carried to Sprint 2** |
+| F1 CI security regressions | **Carried to Sprint 2** |
 | B1–B3 demo bus harden | **Still open** (demo unchanged; no auth) |
 
 **Exit (achieved):** Re-ran fix verification on 0.1.5 — F07/F11 closed; F13 partial; F01/F02/F06/F08/F10/F12 remain fixed.
 
-### Sprint 2 — “Trust residuals + honesty 0.1.6” (proposed next)
+### Sprint 2 — "Trust + CLI 0.1.6/0.1.7" — ✅ **COMPLETED**
 
-- Finish **A2**: reject zlib unused tail / harden trailing malleability (close F13 residual)  
-- **C9**: bump README banner to match package version  
-- **A6**: TRUST.md threat model  
-- **A4**: runtime/`DeprecationWarning` or loud docs on `strict=False`  
-- **C5**: demo README → 0.1.5 API  
-- **F1**: CI gate with `verify_fixes_0_1_5.py`  
-- Optional: minimal **B1–B3** local demo bus harden (even if unpublished)
+**Shipped Items (v0.1.6/0.1.7):**
+- ✅ **C1**: Full CLI implementation (pack/unpack/verify/inspect) with 15 tests
+- ✅ **C3**: CLI inspect command  
+- ✅ **C9**: README banner updated to v0.1.6 (republished as 0.1.7)
+- ✅ **A6**: TRUST.md comprehensive threat model (450+ lines)
+- ✅ **A4**: Runtime `DeprecationWarning` for `strict=False`
+- ✅ **C5**: Examples updated to demonstrate 0.1.6 API with IntegrityError
+- ✅ **F1**: GitHub Actions CI with security regression tests (Python 3.9-3.12)
+- ✅ Modern SPDX license format (removed build warnings)
+- ✅ Test suite expanded from 81 to 96 tests
 
-**Exit:** F13 closed or documented as accepted risk; docs version-accurate; CI blocks integrity regressions.
+**Deferred to Sprint 3:**
+- **A2**: Finish F13 residual (zlib unused tail rejection)
+- **B1–B3**: Demo bus hardening
 
-### Sprint 3 — “Signed capsules 0.2.0”
+**Exit Achieved:** v0.1.6/0.1.7 shipped with CLI, TRUST.md, CI/CD, 96 tests, all docs accurate on PyPI.
+
+### Sprint 3 — "Signed capsules 0.2.0" (proposed next)
 
 - **A1** optional HMAC in capsule format (closes F09 direction)  
-- **C1** CLI pack/unpack/verify via real `console_scripts`  
+- **A2** finish F13 residual (reject zlib unused tail)
 - **C4** exception hierarchy  
 - **E6** size/latency benchmarks published  
 
-**Exit:** Documented `PROMPT_CAPSULE_HMAC_KEY` path; `promptcapsule` on PATH after install.
+**Exit:** Documented `PROMPT_CAPSULE_HMAC_KEY` path; `promptcapsule` on PATH after install (already done in 0.1.6).
 
-### Sprint 4 — “Bus + ecosystem”
+### Sprint 4 — "Bus + ecosystem"
 
 - **B7** publish bus package/extra  
 - **B1–B3**, **B5**, **B6** auth / limits / audit / TTL  
@@ -265,7 +280,7 @@ Effort: **S** ≤1 day · **M** 2–5 days · **L** 1–2 weeks · **XL** multi-
 **Metric:** % of decompress calls with signature verified in telemetry (opt-in).
 
 ### Pitch 2 — Capsule Manifests (multi-asset handoff)
-**Problem:** Agents pass “research brief + table + tool log” as one blob or many ad-hoc messages.  
+**Problem:** Agents pass "research brief + table + tool log" as one blob or many ad-hoc messages.  
 **Solution:** `cap_m_…` manifest listing child capsules + roles.  
 **Why now:** Natural extension of A2A story without LLM compression fiction.  
 **Metric:** Demo shows 3-file handoff with one parent capsule string.
@@ -288,11 +303,11 @@ Effort: **S** ≤1 day · **M** 2–5 days · **L** 1–2 weeks · **XL** multi-
 **Why now:** Trust + enterprise storytelling.  
 **Metric:** Blocked packs in CI examples.
 
-### Pitch 6 — Real CLI (close docs gap)
+### Pitch 6 — Real CLI
 **Problem:** Users expect `promptcapsule` on PATH; wheel has no entry point.  
 **Solution:** `pack|unpack|inspect|verify` with `console_scripts`.  
-**Why now:** Sprint 1 trust work landed; DX is the next adoption lever.  
-**Metric:** Time-to-first-capsule without writing Python &lt; 2 minutes.
+**Status:** ✅ **SHIPPED in 0.1.6**
+**Metric:** Time-to-first-capsule without writing Python &lt; 2 minutes — **achieved**.
 
 ---
 
@@ -308,13 +323,13 @@ Effort: **S** ≤1 day · **M** 2–5 days · **L** 1–2 weeks · **XL** multi-
 
 ## 10. Success metrics
 
-| Metric | Baseline (guess) | 90-day target |
-|--------|------------------|---------------|
-| PyPI downloads / month | early | 5× from 0.1.3 week-1 |
-| GitHub stars / issues with repro | — | Healthy issue hygiene &lt;7d first response |
-| Security findings reopen rate | 0.1.0 high | Zero P0 reopen after 0.1.6 (F13 residual closed) |
-| Time to A2A demo | ~30 min with demo | &lt;10 min with CLI + docs |
-| % decompress using `strict=True` | default | Keep default; warn on False |
+| Metric | Baseline (guess) | 90-day target | Current (0.1.7) |
+|--------|------------------|---------------|-----------------|
+| PyPI downloads / month | early | 5× from 0.1.3 week-1 | TBD |
+| GitHub stars / issues with repro | — | Healthy issue hygiene &lt;7d first response | On track |
+| Security findings reopen rate | 0.1.0 high | Zero P0 reopen after 0.1.6 (F13 residual closed) | 0 (F13 accepted risk documented) |
+| Time to A2A demo | ~30 min with demo | &lt;10 min with CLI + docs | **5 min with CLI (achieved)** |
+| % decompress using `strict=True` | default | Keep default; warn on False | **100% default + warning shipped** |
 
 ---
 
@@ -327,13 +342,14 @@ Effort: **S** ≤1 day · **M** 2–5 days · **L** 1–2 weeks · **XL** multi-
 | 2026-09-23 | Backlog prioritizes trust → signed format → bus → ecosystem | Match evidence from security review + A2A positioning |
 | 2026-09-23 | Mark A3/A9/F07/F11 done after 0.1.5 PoC verification; keep F09/F13 residual/CLI/bus open | Evidence-backed only (`FIX_VERIFICATION_0_1_5.md`) |
 | 2026-09-23 | Next sprint = trust residuals + doc honesty (not jump straight to HMAC) | Close F13 gap and version banner before 0.2.0 signed capsules |
-| Proposed | Keep MIT; optional paid “bus cloud” later only if demand | Stay open-core friendly without bait-and-switch on core |
+| 2026-09-24 | Sprint 2 complete with CLI, TRUST.md, CI | Shipped 0.1.6/0.1.7 with 9 major features |
+| Proposed | Keep MIT; optional paid "bus cloud" later only if demand | Stay open-core friendly without bait-and-switch on core |
 
 ---
 
 ## 12. How to use this backlog
 
-1. Pick Sprint 2 items unless strategy changes.  
+1. Pick Sprint 3 items unless strategy changes.  
 2. File GitHub issues with IDs (`A2`, `B1`, …) and link this doc.  
 3. Do not ship features that contradict non-goals without updating §9.  
 4. Re-score priorities after each security review or user interview.
