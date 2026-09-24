@@ -53,6 +53,17 @@ This is a use of the existing API, not a separate agent protocol, and not encryp
 
 ---
 
+## What's new in 0.1.6 (CLI + Trust Model + CI)
+
+**v0.1.6** (2026-09-24):
+- 🎉 **Command-line interface** - Full CLI with `pack`, `unpack`, `verify`, `inspect` commands
+- 📖 **TRUST.md** - Comprehensive 450-line threat model documenting security guarantees & limitations
+- 🔒 **GitHub Actions CI** - Automated testing across Python 3.9-3.12 on Ubuntu/macOS/Windows
+- ⚠️ **Safety warnings** - Runtime `DeprecationWarning` when using discouraged `strict=False`
+- ✅ **96 automated tests** - Added 15 CLI tests to existing security/core test suite
+- 🔧 **Modern packaging** - Updated to SPDX license format (no more build warnings)
+- 📚 **Improved examples** - All examples now demonstrate fail-closed pattern with `IntegrityError`
+
 ## What's new in 0.1.5 (docs clarity)
 
 - Public docs now state **81 automated tests** (not “27”).
