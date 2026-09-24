@@ -4,19 +4,18 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "promptcapsule"
-version = "0.1.5"
+version = "0.1.6"
 description = "Lossless prompt capsules with fail-closed integrity for agent handoffs"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.8"
 authors = [
     {name = "Udaya Nirogi", email = "udaya@example.com"}
 ]
-keywords = ["prompt", "compression", "retrieval", "ai", "llm", "agents", "agent-to-agent", "integrity"]
+keywords = ["prompt", "compression", "retrieval", "ai", "llm", "agents", "agent-to-agent", "integrity", "cli"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
