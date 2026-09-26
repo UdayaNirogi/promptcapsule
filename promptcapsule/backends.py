@@ -49,7 +49,8 @@ class SQLiteBackend(VaultBackend):
         self._init_db()
 
     def _init_db(self):
-        with sqlite3.connect(self.db_path) as conn:
+        conn = sqlite3.connect(self.db_path)
+        try:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS capsules (
@@ -62,25 +63,40 @@ class SQLiteBackend(VaultBackend):
                 """
             )
             conn.commit()
+        finally:
+            conn.close()
+
+    def close(self):
+        """Explicitly close any cached connections (Windows file locking fix)."""
+        # Force close all connections by connecting and immediately closing
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.close()
+        except Exception:
+            pass
 
     def store(self, text: str, checksum: str) -> str:
         # Rare collision retry
         for _ in range(8):
             key = _new_vault_key("sql")
             try:
-                with sqlite3.connect(self.db_path) as conn:
+                conn = sqlite3.connect(self.db_path)
+                try:
                     conn.execute(
                         "INSERT INTO capsules (key, text, checksum) VALUES (?, ?, ?)",
                         (key, text, checksum),
                     )
                     conn.commit()
-                return key
+                    return key
+                finally:
+                    conn.close()
             except sqlite3.IntegrityError:
                 continue
         raise RuntimeError("Failed to generate unique vault key")
 
     def retrieve(self, key: str) -> str:
-        with sqlite3.connect(self.db_path) as conn:
+        conn = sqlite3.connect(self.db_path)
+        try:
             cursor = conn.execute(
                 "SELECT text FROM capsules WHERE key = ?",
                 (key,),
@@ -89,9 +105,12 @@ class SQLiteBackend(VaultBackend):
             if row is None:
                 raise KeyError(f"Key not found: {key}")
             return row[0]
+        finally:
+            conn.close()
 
     def retrieve_with_checksum(self, key: str) -> tuple:
-        with sqlite3.connect(self.db_path) as conn:
+        conn = sqlite3.connect(self.db_path)
+        try:
             cursor = conn.execute(
                 "SELECT text, checksum FROM capsules WHERE key = ?",
                 (key,),
@@ -100,6 +119,8 @@ class SQLiteBackend(VaultBackend):
             if row is None:
                 raise KeyError(f"Key not found: {key}")
             return row[0], row[1]
+        finally:
+            conn.close()
 
 
 class GitHubGistBackend(VaultBackend):
