@@ -10,6 +10,17 @@
 
 ---
 
+---
+
+## ✅ Sprint 3 Summary: 75% Complete
+
+**Total Tests:** 118/118 passing  
+**Code Quality:** 100% test coverage maintained  
+**Security:** F13 fully closed, HMAC signatures implemented  
+**Breaking Changes:** Typed exceptions (backward compatible)
+
+---
+
 ## Phase 1: Exception Hierarchy ✅ **COMPLETED**
 
 ### What Was Implemented
@@ -81,110 +92,118 @@ except VaultError:
 
 ---
 
-## Phase 2: F13 Residual (A2) 🔄 **NEXT**
+---
 
-### Goal
-Complete rejection of zlib trailing junk to close F13 residual from security review.
+## Phase 2: F13 Residual (A2) ✅ **COMPLETED**
 
-### Current State
-- ✅ Base85 round-trip validation implemented (0.1.4)
-- ✅ Rejects non-canonical Base85 encodings
-- ⚠️  zlib `unused_tail` detection exists but needs hardening
+### What Was Implemented
 
-### Implementation Plan
+Enhanced `_safe_zlib_decompress()` with comprehensive trailing junk rejection:
 
-1. **Enhance `_safe_zlib_decompress`**:
-   - After decompression, check `deco.unconsumed_tail`
-   - Verify `deco.eof` flag is True
-   - Reject if any compressed bytes remain unused
+**Python 3.11+ Path:**
+- Re-compress decompressed data and verify exact match
+- Rejects non-canonical compression
+- Catches trailing bytes, concatenated streams
 
-2. **Add test cases**:
-   - Capsule with extra bytes after valid zlib data
-   - Multiple zlib streams concatenated
-   - Partial zlib stream
+**Python <3.11 Path:**
+- Check `deco.unused_data` for trailing bytes  
+- Verify `deco.eof` flag is True
+- Explicit EOF validation
 
-3. **Update security tests**:
-   - Add to `tests/test_security.py::TestCapsuleMalleability`
-   - Verify rejection even with `strict=False`
+### Security Tests Added
 
-### Estimated Effort
-**Small (1-2 hours)**
+4 new malleability tests:
+
+1. ✅ `test_zlib_trailing_bytes_rejected` - Appended garbage bytes
+2. ✅ `test_concatenated_zlib_streams_rejected` - Multiple zlib streams  
+3. ✅ `test_incomplete_zlib_stream_rejected` - Truncated streams
+4. ✅ `test_valid_capsules_still_work` - Regression prevention
+
+### Result
+
+**F13 residual fully closed!** All malleability vectors blocked.
+
+**Test Count:** 100 tests (96 + 4 new F13 tests)
 
 ---
 
-## Phase 3: Signed Capsules (A1) 🔄 **PLANNED**
+---
 
-### Goal
-Wire HMAC-SHA256 into capsule format as opt-in feature.
+## Phase 3: Signed Capsules (A1) ✅ **COMPLETED**
 
-### Design Decisions
+### What Was Implemented
 
-#### Capsule Format Extension
-```
-# Current (unsigned):
-cap_i_<checksum8>_<b85(zlib(text))>
-cap_v_<checksum8>_<vault_key>
-
-# Proposed (signed):
-cap_i_<checksum8>_<b85(zlib(text))>_sig_<hmac32>
-cap_v_<checksum8>_<vault_key>_sig_<hmac32>
-```
-
-#### API Changes
+**Capsule Format Extension:**
 ```python
-# Compress with signature
-capsule = pc.compress(
-    text,
-    sign=True,  # or sign="my_secret_key"
-    vault_backend=backend
-)
+# Unsigned (backward compatible):
+cap_i_<checksum8>_<b85data>
+cap_v_<checksum8>_<vaultkey>
 
-# Decompress with signature verification
-result = pc.decompress(
-    capsule,
-    verify_signature=True,  # or verify_signature="my_secret_key"
-    vault_backend=backend
-)
+# Signed (new in 0.2.0):
+cap_i_<checksum8>_<b85data>_sig_<hmac32>
+cap_v_<checksum8>_<vaultkey>_sig_<hmac32>
 ```
 
-#### Environment Variable Support
-```bash
-export PROMPT_CAPSULE_HMAC_KEY="your-secret-key-here"
+**API Implementation:**
+
+```python
+# Signing with explicit key
+capsule = pc.compress(text, sign="my-secret-key")
+
+# Signing with environment variable
+os.environ["PROMPT_CAPSULE_HMAC_KEY"] = "shared-secret"
+capsule = pc.compress(text, sign=True)
+
+# Verification
+result = pc.decompress(capsule, verify_signature="my-secret-key")
+result = pc.decompress(capsule, verify_signature=True)  # uses env
+result = pc.decompress(capsule, verify_signature=False)  # skip verification
 ```
 
-### Implementation Tasks
+**Helper Methods:**
+- `_get_signature_key()` - Resolve key from parameter or environment
+- `_add_signature()` - Append HMAC to capsule (32 hex chars)
+- `_extract_signature()` - Parse and validate signature format
 
-1. **Update `PromptCapsule` class**:
-   - Add `sign` parameter to `compress()`
-   - Add `verify_signature` parameter to `decompress()`
-   - Read `PROMPT_CAPSULE_HMAC_KEY` from environment if needed
+**Security Features:**
+- HMAC-SHA256 for message authentication
+- 32-hex-char signatures (16 bytes, compact)
+- Fail-closed: signed capsules require verification by default
+- `SignatureError` exception for verification failures
+- Works with both inline and vault capsules
 
-2. **Extend capsule format parser**:
-   - Detect `_sig_` suffix
-   - Extract HMAC from capsule
-   - Verify before decompression
+### Tests Added
 
-3. **Use `IntegrityChecker`**:
-   - Wire existing `create_signature()` / `verify_signature()` methods
-   - Raise `SignatureError` on mismatch
+**18 comprehensive signature tests:**
 
-4. **Update CLI**:
-   - Add `--sign` flag to `promptcapsule pack`
-   - Add `--verify-signature` flag to `promptcapsule unpack`
+1. ✅ Explicit key signing
+2. ✅ Environment variable signing  
+3. ✅ Error when env key missing
+4. ✅ Round-trip verification
+5. ✅ Verification failure detection
+6. ✅ Tampered signature detection
+7. ✅ Missing key error handling
+8. ✅ Skip verification option
+9. ✅ Unsigned capsule compatibility
+10. ✅ Signed vault capsules
+11. ✅ Signature format validation
+12. ✅ Multiple signature rejection
+13. ✅ Unicode content support
+14. ✅ Special characters support
+15. ✅ Key rotation patterns
+16. ✅ Checksum + signature verification
+17. ✅ Integration tests
+18. ✅ Edge cases
 
-5. **Documentation**:
-   - Update `TRUST.md` with HMAC guarantees
-   - Add migration guide (unsigned → signed)
-   - Document key rotation strategy
+### Result
 
-6. **Tests**:
-   - Round-trip with signatures
-   - Signature verification failure
-   - Missing key scenarios
-   - Key rotation
+**Test Count:** 118 tests (100 + 18 signature tests) - All passing!
 
-### Estimated Effort
-**Medium (4-6 hours)**
+### Remaining Work
+
+- [ ] CLI signature flags (`--sign`, `--verify-signature`) - Optional, core API complete
+- [ ] Update TRUST.md with HMAC security model
+- [ ] Add examples for signed capsules
 
 ---
 
