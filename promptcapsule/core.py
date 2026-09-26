@@ -11,7 +11,13 @@ import zlib
 from dataclasses import dataclass
 from typing import NamedTuple
 
-from .exceptions import FormatError, IntegrityError, SignatureError, SizeLimitError, VaultError
+from .exceptions import (
+    FormatError,
+    IntegrityError,
+    SignatureError,
+    SizeLimitError,
+    VaultError,
+)
 from .integrity import IntegrityChecker
 
 

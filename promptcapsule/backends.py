@@ -72,8 +72,8 @@ class SQLiteBackend(VaultBackend):
         try:
             conn = sqlite3.connect(self.db_path)
             conn.close()
-        except Exception:
-            pass
+        except Exception:  # noqa: S110, BLE001
+            pass  # Best-effort cleanup, failures are acceptable
 
     def store(self, text: str, checksum: str) -> str:
         # Rare collision retry
