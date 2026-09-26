@@ -276,5 +276,69 @@ class TestSignatureIntegration:
             pc.decompress(tampered, verify_signature=key, strict=True)
 
 
+class TestSignatureRequired:
+    """A receiver that supplies a key must reject capsules without a valid signature."""
+
+    def test_stripped_signature_rejected(self):
+        pc = PromptCapsule()
+        signed = pc.compress("transfer $100 to alice", sign="shared-secret")
+        stripped = signed.rsplit("_sig_", 1)[0]
+
+        with pytest.raises(SignatureError, match="unsigned"):
+            pc.decompress(stripped, verify_signature="shared-secret")
+
+    def test_forged_unsigned_capsule_rejected(self):
+        pc = PromptCapsule()
+        forged = pc.compress("transfer $9999 to mallory")
+
+        with pytest.raises(SignatureError, match="unsigned"):
+            pc.decompress(forged, verify_signature="shared-secret")
+
+    def test_stripped_signature_rejected_with_env_key(self, monkeypatch):
+        monkeypatch.setenv("PROMPT_CAPSULE_HMAC_KEY", "env-secret")
+        pc = PromptCapsule()
+        stripped = pc.compress("hello", sign=True).rsplit("_sig_", 1)[0]
+
+        with pytest.raises(SignatureError, match="unsigned"):
+            pc.decompress(stripped, verify_signature=True)
+
+    def test_stripped_vault_signature_rejected_before_retrieval(self):
+        class CountingBackend(InMemoryBackend):
+            retrievals = 0
+
+            def retrieve_with_checksum(self, key):
+                CountingBackend.retrievals += 1
+                return super().retrieve_with_checksum(key)
+
+        backend = CountingBackend()
+        pc = PromptCapsule()
+        signed = pc.compress("x" * 1000, vault_backend=backend, sign="k")
+        stripped = signed.rsplit("_sig_", 1)[0]
+
+        with pytest.raises(SignatureError, match="unsigned"):
+            pc.decompress(stripped, vault_backend=backend, verify_signature="k")
+        assert CountingBackend.retrievals == 0
+
+    def test_default_still_accepts_unsigned(self, monkeypatch):
+        monkeypatch.delenv("PROMPT_CAPSULE_HMAC_KEY", raising=False)
+        pc = PromptCapsule()
+        assert pc.decompress(pc.compress("plain")).text == "plain"
+
+    def test_empty_key_rejected_on_compress(self):
+        with pytest.raises(SignatureError, match="empty"):
+            PromptCapsule().compress("hi", sign="")
+
+    def test_empty_key_rejected_on_decompress(self):
+        pc = PromptCapsule()
+        signed = pc.compress("hi", sign="k")
+        with pytest.raises(SignatureError):
+            pc.decompress(signed, verify_signature="")
+
+    def test_empty_env_key_rejected(self, monkeypatch):
+        monkeypatch.setenv("PROMPT_CAPSULE_HMAC_KEY", "")
+        with pytest.raises(SignatureError, match="PROMPT_CAPSULE_HMAC_KEY"):
+            PromptCapsule().compress("hi", sign=True)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

@@ -12,7 +12,7 @@ from .exceptions import (
 )
 from .integrity import IntegrityChecker
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __author__ = "Udaya Nirogi"
 __all__ = [
     "CapsuleResult",

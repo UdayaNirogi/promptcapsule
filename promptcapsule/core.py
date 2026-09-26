@@ -131,10 +131,12 @@ class PromptCapsule:
             strict: If True (default), raise IntegrityError when verification fails
                     instead of returning plaintext with verified=False.
             verify_signature: Optional HMAC signature verification:
-                - None (default): Auto-verify if signature present
-                - True: Verify using PROMPT_CAPSULE_HMAC_KEY environment variable
+                - None (default): Verify if the capsule is signed (key from
+                  PROMPT_CAPSULE_HMAC_KEY); unsigned capsules are accepted
+                - str: Require a valid signature made with this secret key;
+                  unsigned capsules raise SignatureError
+                - True: Same as str, using PROMPT_CAPSULE_HMAC_KEY
                 - False: Skip signature verification (not recommended)
-                - str: Verify using provided secret key
 
         Warning:
             Using strict=False is discouraged and may be deprecated in a future release.
@@ -159,21 +161,21 @@ class PromptCapsule:
         if len(capsule.encode("utf-8")) > self.MAX_PROMPT_SIZE:
             raise SizeLimitError("Capsule exceeds maximum allowed size")
 
-        # Check for signature and verify if present
         has_signature = "_sig_" in capsule
+        # A caller that supplies a key must never accept an unsigned capsule,
+        # otherwise stripping the signature bypasses verification entirely.
+        signature_required = verify_signature is not None and verify_signature is not False
+        if signature_required and not has_signature:
+            raise SignatureError("Signature required but capsule is unsigned")
+
+        sig_key: str | None = None
+        expected_sig = ""
         if has_signature:
             capsule, expected_sig = self._extract_signature(capsule)
-            # Get verification key (auto-detect or explicit)
-            if verify_signature is False:
-                # User explicitly disabled signature verification
-                pass
-            else:
-                sig_key = self._get_signature_key(verify_signature if verify_signature else True)
-                if not sig_key:
-                    raise SignatureError(
-                        "Capsule has signature but no key provided for verification. "
-                        "Set PROMPT_CAPSULE_HMAC_KEY environment variable or pass verify_signature parameter."
-                    )
+            if verify_signature is not False:
+                sig_key = self._get_signature_key(
+                    True if verify_signature is None else verify_signature
+                )
 
         capsule_data = capsule[4:]
 
@@ -186,18 +188,11 @@ class PromptCapsule:
         else:
             raise FormatError("Unknown capsule type")
 
-        # Verify signature if present and not explicitly disabled
-        if has_signature and verify_signature is not False:
-            sig_key = self._get_signature_key(verify_signature if verify_signature else True)
-            if sig_key:
-                # Expand short signature back to full length for verification
-                # Our _add_signature uses first 32 hex chars, but verify_signature expects full 64
-                computed_sig_full = IntegrityChecker.create_signature(result.text, sig_key)
-                computed_sig_short = computed_sig_full[:32]
-
-                # Never include the computed signature in the error: it would leak a valid MAC.
-                if not hmac.compare_digest(computed_sig_short, expected_sig):
-                    raise SignatureError("Signature verification failed")
+        if sig_key is not None:
+            computed_sig_short = IntegrityChecker.create_signature(result.text, sig_key)[:32]
+            # Never include the computed signature in the error: it would leak a valid MAC.
+            if not hmac.compare_digest(computed_sig_short, expected_sig):
+                raise SignatureError("Signature verification failed")
 
         if strict and not result.verified:
             raise IntegrityError(
@@ -388,17 +383,18 @@ class PromptCapsule:
             Key string if available, None otherwise
 
         Raises:
-            SignatureError: If signing explicitly requested but no key available
+            SignatureError: If a key was requested but is empty or unavailable
         """
         if sign is None or sign is False:
             return None
 
         if isinstance(sign, str):
+            if not sign:
+                raise SignatureError("HMAC key must not be empty")
             return sign
 
-        # sign is True: use environment variable
         key = os.environ.get("PROMPT_CAPSULE_HMAC_KEY")
-        if sign is True and not key:
+        if not key:
             raise SignatureError(
                 "Signing requested but PROMPT_CAPSULE_HMAC_KEY environment variable not set"
             )

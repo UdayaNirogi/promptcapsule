@@ -53,9 +53,17 @@ result = pc.decompress(capsule, vault_backend=vault)  # strict=True by default
 - **Vault** (`cap_v_…`): both agents use the same backend (SQLite, GitHub Gist, or S3). The long prompt stays in the vault; only a short key moves between agents.
 - Use `strict=False` only if you intentionally want plaintext with `verified=False` (legacy).
 
-This is a use of the existing API, not a separate agent protocol, and not encryption. The project includes **119 automated tests** (core, backends, integrity, integration, security regressions, signatures, and CLI).
+This is a use of the existing API, not a separate agent protocol, and not encryption. The project includes **127 automated tests** (core, backends, integrity, integration, security regressions, signatures, and CLI).
 
 ---
+
+## What's new in 0.2.1 (security fix — upgrade from 0.2.0)
+
+**v0.2.1** (2026-09-26):
+- 🔒 **Fixed signature-stripping bypass.** In 0.2.0, a receiver that passed a key still accepted a capsule whose `_sig_…` suffix had been removed, or any unsigned capsule. Now, passing `verify_signature="key"` (or `True`) **requires** a valid signature: unsigned capsules raise `SignatureError` before anything is decompressed or fetched from a vault.
+- 🔑 **Empty keys are rejected.** `sign=""`, `verify_signature=""`, or an empty `PROMPT_CAPSULE_HMAC_KEY` now raise `SignatureError` instead of silently producing or accepting unsigned capsules.
+
+**Receivers: always pass the key.** With the default `verify_signature=None`, signed capsules are verified but unsigned capsules are still accepted, for backward compatibility. That default gives no authenticity guarantee.
 
 ## What's new in 0.2.0 (signed capsules + typed exceptions)
 
@@ -74,7 +82,7 @@ capsule = pc.compress("Summarise the Q3 report", sign="shared-secret")
 try:
     text = pc.decompress(capsule, verify_signature="shared-secret").text
 except SignatureError:
-    ...  # wrong key or tampered capsule: do not use
+    ...  # wrong key, tampered, or unsigned capsule: do not use
 ```
 
 ## What's new in 0.1.6 (CLI + Trust Model + CI)
