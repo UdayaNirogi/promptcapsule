@@ -168,77 +168,77 @@ class TestCapsuleMalleability:
         capsule = pc.compress("hello")
         with pytest.raises(ValueError):
             pc.decompress(capsule + "_deadbeef", strict=False)
-    
+
     def test_zlib_trailing_bytes_rejected(self):
         """F13 residual: zlib stream with trailing bytes should be rejected."""
         import base64
-        
+
         pc = PromptCapsule()
         text = "test payload"
-        
+
         # Create valid compressed data
         compressed = zlib.compress(text.encode("utf-8"), level=9)
-        
+
         # Add trailing garbage bytes
         malicious = compressed + b"\xde\xad\xbe\xef"
-        
+
         # Encode as Base85
         encoded = base64.b85encode(malicious).decode("ascii")
         checksum = pc._compute_checksum(text)
-        
+
         # Create malicious capsule
         evil_capsule = f"cap_i_{checksum[:8]}_{encoded}"
-        
+
         # Should be rejected even with strict=False
         with pytest.raises(FormatError):  # trailing bytes
             pc.decompress(evil_capsule, strict=False)
-    
+
     def test_concatenated_zlib_streams_rejected(self):
         """F13 residual: multiple zlib streams concatenated should fail."""
         import base64
-        
+
         pc = PromptCapsule()
         text1 = "first"
         text2 = "second"
-        
+
         # Create two valid zlib streams
         stream1 = zlib.compress(text1.encode("utf-8"), level=9)
         stream2 = zlib.compress(text2.encode("utf-8"), level=9)
-        
+
         # Concatenate them (malicious attempt)
         concatenated = stream1 + stream2
-        
+
         encoded = base64.b85encode(concatenated).decode("ascii")
         checksum = pc._compute_checksum(text1)
-        
+
         evil_capsule = f"cap_i_{checksum[:8]}_{encoded}"
-        
+
         with pytest.raises(FormatError):  # trailing data
             pc.decompress(evil_capsule, strict=False)
-    
+
     def test_incomplete_zlib_stream_rejected(self):
         """F13 residual: truncated zlib stream should fail."""
         import base64
-        
+
         pc = PromptCapsule()
         text = "test data for truncation"
-        
+
         # Create valid compressed data and truncate it
         compressed = zlib.compress(text.encode("utf-8"), level=9)
         truncated = compressed[:-5]  # Remove last 5 bytes
-        
+
         encoded = base64.b85encode(truncated).decode("ascii")
         checksum = pc._compute_checksum(text)
-        
+
         evil_capsule = f"cap_i_{checksum[:8]}_{encoded}"
-        
+
         with pytest.raises(FormatError):  # incomplete stream
             pc.decompress(evil_capsule, strict=False)
-    
+
     def test_valid_capsules_still_work(self):
         """Ensure F13 hardening doesn't break legitimate capsules."""
         pc = PromptCapsule()
-        
+
         # Test various sizes and content types
         test_cases = [
             "short",
@@ -247,7 +247,7 @@ class TestCapsuleMalleability:
             "unicode: 你好世界 🎉",
             "special\nchars\ttab\r\n",
         ]
-        
+
         for text in test_cases:
             capsule = pc.compress(text)
             result = pc.decompress(capsule)
@@ -325,9 +325,7 @@ class TestGistAllowlist:
             self.user = self.github.get_user()
             self._login = self.user.login
             self.require_owner = require_owner
-            self.allowed_gist_ids = (
-                set(allowed_gist_ids) if allowed_gist_ids is not None else None
-            )
+            self.allowed_gist_ids = set(allowed_gist_ids) if allowed_gist_ids is not None else None
             self._checksum_cache = {}
 
         GitHubGistBackend.__init__ = fake_init
@@ -338,9 +336,7 @@ class TestGistAllowlist:
             text, _ = backend.retrieve_with_checksum("gist_owned")
             assert text == "secret"
 
-            backend2 = GitHubGistBackend(
-                "token", allowed_gist_ids={"only_this"}
-            )
+            backend2 = GitHubGistBackend("token", allowed_gist_ids={"only_this"})
             with pytest.raises(KeyError, match="allowlist"):
                 backend2.retrieve_with_checksum("gist_owned")
         finally:

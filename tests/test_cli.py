@@ -41,13 +41,13 @@ def test_pack_unpack_roundtrip(tmp_path):
     test_file = tmp_path / "test.txt"
     test_text = "You are a helpful assistant"
     test_file.write_text(test_text)
-    
+
     # Pack
     pack_result = run_cli("pack", "--file", str(test_file))
     assert pack_result.returncode == 0
     capsule = pack_result.stdout.strip()
     assert capsule.startswith("cap_i_")
-    
+
     # Unpack
     unpack_result = run_cli("unpack", "--capsule", capsule)
     assert unpack_result.returncode == 0
@@ -80,7 +80,7 @@ def test_inspect_command():
     # First create a capsule
     pack_result = run_cli("pack", "--text", "Test")
     capsule = pack_result.stdout.strip()
-    
+
     # Inspect it
     inspect_result = run_cli("inspect", "--capsule", capsule)
     assert inspect_result.returncode == 0
@@ -92,11 +92,12 @@ def test_inspect_json_output():
     """Test inspect command with JSON output."""
     pack_result = run_cli("pack", "--text", "Test")
     capsule = pack_result.stdout.strip()
-    
+
     inspect_result = run_cli("inspect", "--capsule", capsule, "--json")
     assert inspect_result.returncode == 0
-    
+
     import json
+
     data = json.loads(inspect_result.stdout)
     assert data["mode"] == "inline"
     assert "checksum_prefix" in data
@@ -106,7 +107,7 @@ def test_verify_command():
     """Test verify command."""
     pack_result = run_cli("pack", "--text", "Test prompt")
     capsule = pack_result.stdout.strip()
-    
+
     verify_result = run_cli("verify", "--capsule", capsule)
     assert verify_result.returncode == 0
     assert "PASSED" in verify_result.stdout
@@ -116,10 +117,10 @@ def test_verify_tampered_capsule():
     """Test verify command with tampered capsule."""
     pack_result = run_cli("pack", "--text", "Test")
     capsule = pack_result.stdout.strip()
-    
+
     # Tamper with capsule
     tampered = capsule[:-5] + "XXXXX"
-    
+
     verify_result = run_cli("verify", "--capsule", tampered)
     assert verify_result.returncode == 1
     # Error messages go to stderr
@@ -129,11 +130,11 @@ def test_verify_tampered_capsule():
 def test_pack_output_file(tmp_path):
     """Test packing to output file."""
     output_file = tmp_path / "capsule.txt"
-    
+
     result = run_cli("pack", "--text", "Test", "--output", str(output_file))
     assert result.returncode == 0
     assert output_file.exists()
-    
+
     capsule = output_file.read_text().strip()
     assert capsule.startswith("cap_i_")
 
@@ -142,7 +143,7 @@ def test_unpack_output_file(tmp_path):
     """Test unpacking to output file."""
     pack_result = run_cli("pack", "--text", "Test prompt")
     capsule = pack_result.stdout.strip()
-    
+
     output_file = tmp_path / "unpacked.txt"
     result = run_cli("unpack", "--capsule", capsule, "--output", str(output_file))
     assert result.returncode == 0
@@ -154,12 +155,12 @@ def test_pack_with_vault(tmp_path):
     """Test packing with vault backend."""
     vault_file = tmp_path / "test_vault.db"
     long_text = "X" * 1000  # Long enough to trigger vault mode
-    
+
     result = run_cli("pack", "--text", long_text, "--vault", str(vault_file))
     assert result.returncode == 0
     capsule = result.stdout.strip()
     assert capsule.startswith("cap_v_")
-    
+
     # Unpack
     unpack_result = run_cli("unpack", "--capsule", capsule, "--vault", str(vault_file))
     assert unpack_result.returncode == 0
@@ -181,7 +182,7 @@ def test_no_strict_warning():
     capsule = pack_result.stdout.strip()
     parts = capsule.split("_")
     tampered = f"cap_i_deadbeef_{parts[-1]}"
-    
+
     # Try with --no-strict
     result = run_cli("unpack", "--capsule", tampered, "--no-strict")
     # Should not raise error, but should warn
@@ -193,7 +194,7 @@ def test_missing_arguments():
     result = run_cli("pack")
     assert result.returncode == 1
     assert "Error" in result.stderr
-    
+
     result = run_cli("unpack")
     assert result.returncode == 1
     assert "Error" in result.stderr

@@ -1,4 +1,5 @@
 """Core compression and decompression logic for PromptCapsule."""
+
 from __future__ import annotations
 
 import base64
@@ -10,13 +11,8 @@ import zlib
 from dataclasses import dataclass
 from typing import NamedTuple
 
-from .exceptions import (
-    FormatError,
-    IntegrityError,
-    SignatureError,
-    SizeLimitError,
-    VaultError,
-)
+from .exceptions import (FormatError, IntegrityError, SignatureError,
+                         SizeLimitError, VaultError)
 from .integrity import IntegrityChecker
 
 
@@ -90,9 +86,7 @@ class PromptCapsule:
 
         text_bytes = text.encode("utf-8")
         if len(text_bytes) > self.MAX_PROMPT_SIZE:
-            raise SizeLimitError(
-                f"Prompt exceeds maximum size of {self.MAX_PROMPT_SIZE} bytes"
-            )
+            raise SizeLimitError(f"Prompt exceeds maximum size of {self.MAX_PROMPT_SIZE} bytes")
 
         checksum = self._compute_checksum(text)
 
@@ -147,7 +141,7 @@ class PromptCapsule:
                 "is recommended for agent handoffs and security-sensitive applications. "
                 "This parameter may be deprecated in a future release.",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
 
         if not isinstance(capsule, str):
@@ -244,9 +238,7 @@ class PromptCapsule:
             # Verify no trailing junk: re-compress and check exact match
             recompressed = zlib.compress(decompressed, level=self.COMPRESSION_LEVEL)
             if recompressed != compressed:
-                raise FormatError(
-                    "zlib stream has trailing junk or non-canonical compression"
-                )
+                raise FormatError("zlib stream has trailing junk or non-canonical compression")
             return decompressed
         except TypeError:
             # Python < 3.11: use decompressobj for granular control
@@ -263,16 +255,12 @@ class PromptCapsule:
 
         # Check for size limit violations
         if deco.unconsumed_tail:
-            raise SizeLimitError(
-                f"Decompressed data exceeds maximum size of {max_length} bytes"
-            )
+            raise SizeLimitError(f"Decompressed data exceeds maximum size of {max_length} bytes")
 
         out += deco.flush()
 
         if len(out) > max_length:
-            raise SizeLimitError(
-                f"Decompressed data exceeds maximum size of {max_length} bytes"
-            )
+            raise SizeLimitError(f"Decompressed data exceeds maximum size of {max_length} bytes")
 
         # F13 hardening: reject if decompressor didn't reach EOF
         # unused_data contains bytes after a valid zlib stream
@@ -296,9 +284,7 @@ class PromptCapsule:
             raise FormatError(f"Invalid Base85 payload: {e}") from e
         # Round-trip: ignores of trailing junk would yield a different re-encode
         if base64.b85encode(compressed).decode("ascii") != encoded:
-            raise FormatError(
-                "Invalid Base85 payload: trailing junk or non-canonical encoding"
-            )
+            raise FormatError("Invalid Base85 payload: trailing junk or non-canonical encoding")
         return compressed
 
     def _decompress_inline(self, capsule_data: str) -> CapsuleResult:

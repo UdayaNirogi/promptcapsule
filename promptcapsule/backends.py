@@ -1,4 +1,5 @@
 """Storage backends for vault mode."""
+
 from __future__ import annotations
 
 import secrets
@@ -157,15 +158,11 @@ class GitHubGistBackend(VaultBackend):
 
     def _assert_gist_allowed(self, key: str, gist) -> None:
         if self.allowed_gist_ids is not None and key not in self.allowed_gist_ids:
-            raise KeyError(
-                f"Gist id not in allowlist: refused ({key!r})"
-            )
+            raise KeyError(f"Gist id not in allowlist: refused ({key!r})")
         if self.require_owner:
             owner = getattr(getattr(gist, "owner", None), "login", None)
             if owner is None or owner != self._login:
-                raise KeyError(
-                    f"Gist not owned by authenticated user {self._login!r}: refused"
-                )
+                raise KeyError(f"Gist not owned by authenticated user {self._login!r}: refused")
 
     def retrieve_with_checksum(self, key: str) -> tuple:
         try:
@@ -201,8 +198,7 @@ class S3Backend(VaultBackend):
             import boto3
         except ImportError as e:
             raise ImportError(
-                "boto3 is required for S3Backend. "
-                "Install with: pip install promptcapsule[vault]"
+                "boto3 is required for S3Backend. " "Install with: pip install promptcapsule[vault]"
             ) from e
 
         self.s3_client = boto3.client("s3", region_name=region)
@@ -212,9 +208,7 @@ class S3Backend(VaultBackend):
     def _assert_key_in_prefix(self, key: str) -> None:
         """Reject capsule-controlled keys outside the configured prefix."""
         if not key.startswith(self.prefix):
-            raise KeyError(
-                f"S3 key outside allowed prefix {self.prefix!r}: refused"
-            )
+            raise KeyError(f"S3 key outside allowed prefix {self.prefix!r}: refused")
         # Block path traversal tricks inside the key
         if ".." in key.split("/"):
             raise KeyError("S3 key contains path traversal: refused")
