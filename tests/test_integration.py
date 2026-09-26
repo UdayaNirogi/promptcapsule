@@ -195,9 +195,7 @@ class TestPerformanceCharacteristics:
         import random
         import string
 
-        random_content = "".join(
-            random.choices(string.ascii_letters + string.digits, k=500)
-        )
+        random_content = "".join(random.choices(string.ascii_letters + string.digits, k=500))
         capsule = self.pc.compress(random_content)
         result = self.pc.decompress(capsule)
 
