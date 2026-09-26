@@ -183,7 +183,9 @@ class GitHubGistBackend(VaultBackend):
         if self.require_owner:
             owner = getattr(getattr(gist, "owner", None), "login", None)
             if owner is None or owner != self._login:
-                raise KeyError(f"Gist not owned by authenticated user {self._login!r}: refused")
+                raise KeyError(
+                    f"Gist not owned by authenticated user {self._login!r}: refused"
+                )
 
     def retrieve_with_checksum(self, key: str) -> tuple:
         try:
@@ -219,7 +221,8 @@ class S3Backend(VaultBackend):
             import boto3
         except ImportError as e:
             raise ImportError(
-                "boto3 is required for S3Backend. " "Install with: pip install promptcapsule[vault]"
+                "boto3 is required for S3Backend. "
+                "Install with: pip install promptcapsule[vault]"
             ) from e
 
         self.s3_client = boto3.client("s3", region_name=region)
