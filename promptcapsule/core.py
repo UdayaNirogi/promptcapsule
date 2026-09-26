@@ -7,7 +7,7 @@ import re
 import warnings
 import zlib
 from dataclasses import dataclass
-from typing import NamedTuple, Optional, Union
+from typing import NamedTuple, Optional, Tuple, Union
 
 from .exceptions import FormatError, IntegrityError, SignatureError, SizeLimitError, VaultError
 from .integrity import IntegrityChecker
@@ -420,7 +420,7 @@ class PromptCapsule:
         return f"{capsule}_sig_{sig_short}"
 
     @staticmethod
-    def _extract_signature(capsule: str) -> tuple[str, str]:
+    def _extract_signature(capsule: str) -> Tuple[str, str]:
         """Extract signature from signed capsule.
         
         Returns:
