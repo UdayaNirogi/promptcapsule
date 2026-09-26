@@ -21,7 +21,7 @@ import zlib
 
 import pytest
 
-from promptcapsule import IntegrityError, PromptCapsule
+from promptcapsule import FormatError, IntegrityError, PromptCapsule
 from promptcapsule.backends import InMemoryBackend, S3Backend, SQLiteBackend
 from promptcapsule.integrity import IntegrityChecker
 
@@ -190,7 +190,7 @@ class TestCapsuleMalleability:
         evil_capsule = f"cap_i_{checksum[:8]}_{encoded}"
         
         # Should be rejected even with strict=False
-        with pytest.raises(Exception):  # FormatError about trailing bytes
+        with pytest.raises(FormatError):  # trailing bytes
             pc.decompress(evil_capsule, strict=False)
     
     def test_concatenated_zlib_streams_rejected(self):
@@ -213,7 +213,7 @@ class TestCapsuleMalleability:
         
         evil_capsule = f"cap_i_{checksum[:8]}_{encoded}"
         
-        with pytest.raises(Exception):  # FormatError about trailing data
+        with pytest.raises(FormatError):  # trailing data
             pc.decompress(evil_capsule, strict=False)
     
     def test_incomplete_zlib_stream_rejected(self):
@@ -232,7 +232,7 @@ class TestCapsuleMalleability:
         
         evil_capsule = f"cap_i_{checksum[:8]}_{encoded}"
         
-        with pytest.raises(Exception):  # FormatError about incomplete stream
+        with pytest.raises(FormatError):  # incomplete stream
             pc.decompress(evil_capsule, strict=False)
     
     def test_valid_capsules_still_work(self):

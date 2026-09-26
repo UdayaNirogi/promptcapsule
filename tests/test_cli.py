@@ -1,8 +1,6 @@
 """Tests for CLI functionality."""
 
 import subprocess
-import sys
-from pathlib import Path
 
 import pytest
 
@@ -15,7 +13,8 @@ def run_cli(*args):
     result = subprocess.run(
         CLI_MODULE + list(args),
         capture_output=True,
-        text=True
+        text=True,
+        check=False,
     )
     return result
 
@@ -62,7 +61,8 @@ def test_pack_from_stdin():
         CLI_MODULE + ["pack", "--file", "-"],
         input=text,
         capture_output=True,
-        text=True
+        text=True,
+        check=False,
     )
     assert result.returncode == 0
     assert result.stdout.startswith("cap_i_")

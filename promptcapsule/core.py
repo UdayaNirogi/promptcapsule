@@ -1,4 +1,5 @@
 """Core compression and decompression logic for PromptCapsule."""
+from __future__ import annotations
 
 import base64
 import hashlib
@@ -7,9 +8,15 @@ import re
 import warnings
 import zlib
 from dataclasses import dataclass
-from typing import NamedTuple, Optional, Tuple, Union
+from typing import NamedTuple
 
-from .exceptions import FormatError, IntegrityError, SignatureError, SizeLimitError, VaultError
+from .exceptions import (
+    FormatError,
+    IntegrityError,
+    SignatureError,
+    SizeLimitError,
+    VaultError,
+)
 from .integrity import IntegrityChecker
 
 
@@ -54,9 +61,9 @@ class PromptCapsule:
     def compress(
         self,
         text: str,
-        vault_backend: Optional["VaultBackend"] = None,
+        vault_backend: VaultBackend | None = None,
         *,
-        sign: Union[bool, str, None] = None,
+        sign: bool | str | None = None,
     ) -> str:
         """
         Compress a prompt into a capsule string.
@@ -110,10 +117,10 @@ class PromptCapsule:
     def decompress(
         self,
         capsule: str,
-        vault_backend: Optional["VaultBackend"] = None,
+        vault_backend: VaultBackend | None = None,
         *,
         strict: bool = True,
-        verify_signature: Union[bool, str, None] = None,
+        verify_signature: bool | str | None = None,
     ) -> CapsuleResult:
         """
         Decompress a capsule string back to the original prompt.
@@ -211,7 +218,7 @@ class PromptCapsule:
     def _compress_vault(
         self,
         text: str,
-        vault_backend: "VaultBackend",
+        vault_backend: VaultBackend,
         checksum: str,
     ) -> str:
         """Store in vault and return reference."""
@@ -327,7 +334,7 @@ class PromptCapsule:
     def _decompress_vault(
         self,
         capsule_data: str,
-        vault_backend: "VaultBackend",
+        vault_backend: VaultBackend,
     ) -> CapsuleResult:
         """Decompress vault capsule with key↔checksum binding."""
         try:
@@ -381,7 +388,7 @@ class PromptCapsule:
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     @staticmethod
-    def _get_signature_key(sign: Union[bool, str, None]) -> Optional[str]:
+    def _get_signature_key(sign: bool | str | None) -> str | None:
         """Get HMAC signature key from parameter or environment.
 
         Args:
@@ -420,7 +427,7 @@ class PromptCapsule:
         return f"{capsule}_sig_{sig_short}"
 
     @staticmethod
-    def _extract_signature(capsule: str) -> Tuple[str, str]:
+    def _extract_signature(capsule: str) -> tuple[str, str]:
         """Extract signature from signed capsule.
 
         Returns:

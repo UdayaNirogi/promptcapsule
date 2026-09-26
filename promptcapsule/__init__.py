@@ -15,20 +15,20 @@ from .integrity import IntegrityChecker
 __version__ = "0.1.7"
 __author__ = "Udaya Nirogi"
 __all__ = [
-    "PromptCapsule",
     "CapsuleResult",
-    # Exceptions
-    "PromptCapsuleError",
-    "IntegrityError",
     "FormatError",
-    "VaultError",
-    "SizeLimitError",
-    "SignatureError",
-    # Utilities
-    "IntegrityChecker",
+    "GitHubGistBackend",
     # Backends
     "InMemoryBackend",
-    "SQLiteBackend",
-    "GitHubGistBackend",
+    # Utilities
+    "IntegrityChecker",
+    "IntegrityError",
+    "PromptCapsule",
+    # Exceptions
+    "PromptCapsuleError",
     "S3Backend",
+    "SQLiteBackend",
+    "SignatureError",
+    "SizeLimitError",
+    "VaultError",
 ]

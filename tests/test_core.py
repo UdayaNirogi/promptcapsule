@@ -6,7 +6,7 @@ import tempfile
 import pytest
 
 from promptcapsule.backends import InMemoryBackend, SQLiteBackend
-from promptcapsule.core import CapsuleResult, PromptCapsule
+from promptcapsule.core import PromptCapsule
 from promptcapsule.exceptions import VaultError
 
 
@@ -245,7 +245,7 @@ class TestInterleavedOperations:
             for p in long_prompts
         ]
         
-        all_capsules = short_capsules + long_capsules
+        short_capsules + long_capsules
         all_originals = short_prompts + long_prompts
         
         # Decompress shorts

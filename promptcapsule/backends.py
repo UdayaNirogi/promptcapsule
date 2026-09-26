@@ -1,9 +1,9 @@
 """Storage backends for vault mode."""
+from __future__ import annotations
 
 import secrets
 import sqlite3
-from datetime import datetime
-from typing import Optional, Set
+from datetime import datetime, timezone
 
 from .core import VaultBackend
 
@@ -24,7 +24,7 @@ class InMemoryBackend(VaultBackend):
         self.store_dict[key] = {
             "text": text,
             "checksum": checksum,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         return key
 
@@ -113,7 +113,7 @@ class GitHubGistBackend(VaultBackend):
         token: str,
         *,
         require_owner: bool = True,
-        allowed_gist_ids: Optional[Set[str]] = None,
+        allowed_gist_ids: set[str] | None = None,
     ):
         try:
             from github import Github
@@ -127,13 +127,13 @@ class GitHubGistBackend(VaultBackend):
         self.user = self.github.get_user()
         self._login = self.user.login
         self.require_owner = require_owner
-        self.allowed_gist_ids: Optional[Set[str]] = (
+        self.allowed_gist_ids: set[str] | None = (
             set(allowed_gist_ids) if allowed_gist_ids is not None else None
         )
         self._checksum_cache: dict = {}
 
     def store(self, text: str, checksum: str) -> str:
-        timestamp = datetime.now().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         description = f"PromptCapsule [{checksum[:8]}] - {timestamp}"
 
         files = {
@@ -228,7 +228,7 @@ class S3Backend(VaultBackend):
             Body=text.encode("utf-8"),
             Metadata={
                 "checksum": checksum,
-                "timestamp": datetime.now().strftime("%Y%m%d_%H%M%S"),
+                "timestamp": datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S"),
             },
         )
         return key

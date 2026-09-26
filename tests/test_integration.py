@@ -66,7 +66,7 @@ class TestEndToEndScenarios:
     
     def test_scenario_version_control_prompts(self):
         """Scenario: User wants to version control their prompts in git."""
-        backend = InMemoryBackend()
+        InMemoryBackend()
         
         # V1 of the prompt
         prompt_v1 = "Generate a poem about mountains"

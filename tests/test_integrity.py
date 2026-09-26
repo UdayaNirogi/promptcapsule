@@ -1,6 +1,7 @@
 """Tests for integrity checking."""
 
 import pytest
+
 from promptcapsule.integrity import IntegrityChecker
 
 

@@ -4,10 +4,9 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Optional
 
 from promptcapsule import IntegrityError, PromptCapsule
-from promptcapsule.backends import InMemoryBackend, SQLiteBackend
+from promptcapsule.backends import SQLiteBackend
 
 
 def pack_command(args):
@@ -37,7 +36,7 @@ def pack_command(args):
         
         if args.output:
             Path(args.output).write_text(capsule, encoding='utf-8')
-            print(f"✓ Capsule saved to {args.output}")
+            print(f"[OK] Capsule saved to {args.output}")
         else:
             print(capsule)
         
@@ -49,7 +48,7 @@ def pack_command(args):
         
         return 0
     
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
@@ -85,7 +84,7 @@ def unpack_command(args):
         
         if args.output:
             Path(args.output).write_text(result.text, encoding='utf-8')
-            print(f"✓ Text saved to {args.output}")
+            print(f"[OK] Text saved to {args.output}")
         else:
             print(result.text)
         
@@ -102,16 +101,16 @@ def unpack_command(args):
         return 0
     
     except IntegrityError as e:
-        print(f"❌ Integrity Error: {e}", file=sys.stderr)
+        print(f"[ERROR] Integrity Error: {e}", file=sys.stderr)
         return 1
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
 
 def inspect_command(args):
     """Inspect a capsule without decompressing (show metadata)."""
-    pc = PromptCapsule()
+    PromptCapsule()
     
     # Read capsule
     if args.file:
@@ -158,7 +157,7 @@ def inspect_command(args):
         
         return 0
     
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Error: {e}", file=sys.stderr)
         return 1
 
@@ -189,20 +188,20 @@ def verify_command(args):
         result = pc.decompress(capsule, vault_backend=vault_backend, strict=True)
         
         if result.verified:
-            print("✓ Integrity verification PASSED")
+            print("[PASS] Integrity verification PASSED")
             if args.verbose:
                 print(f"Mode: {result.mode}")
                 print(f"Checksum: {result.checksum[:16]}...")
                 print(f"Size: {result.original_size} bytes")
             return 0
         else:
-            print("❌ Integrity verification FAILED")
+            print("[FAIL] Integrity verification FAILED")
             return 1
     
     except IntegrityError as e:
-        print(f"❌ Integrity verification FAILED: {e}")
+        print(f"[FAIL] Integrity verification FAILED: {e}")
         return 1
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"Error: {e}", file=sys.stderr)
         return 1
 

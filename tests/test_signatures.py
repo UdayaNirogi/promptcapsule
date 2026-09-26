@@ -4,7 +4,7 @@ import os
 
 import pytest
 
-from promptcapsule import IntegrityError, PromptCapsule, SignatureError
+from promptcapsule import FormatError, IntegrityError, PromptCapsule, SignatureError
 from promptcapsule.backends import InMemoryBackend
 
 
@@ -179,7 +179,7 @@ class TestSignedCapsules:
         valid = pc.compress("test")
         invalid = f"{valid}_sig_INVALID"
 
-        with pytest.raises(Exception):  # FormatError
+        with pytest.raises(FormatError):
             pc.decompress(invalid, verify_signature=False)
 
     def test_multiple_sig_markers_rejected(self):
@@ -191,7 +191,7 @@ class TestSignedCapsules:
         evil = capsule + "_sig_" + "a" * 32
 
         # Should fail during parsing
-        with pytest.raises(Exception):
+        with pytest.raises(FormatError):
             pc.decompress(evil, verify_signature="key")
 
 
