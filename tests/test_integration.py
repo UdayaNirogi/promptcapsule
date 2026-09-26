@@ -1,7 +1,7 @@
 """Integration and regression tests for PromptCapsule."""
 
 import pytest
-from promptcapsule import PromptCapsule
+from promptcapsule import PromptCapsule, VaultError
 from promptcapsule.backends import InMemoryBackend, SQLiteBackend
 import tempfile
 import os
@@ -29,7 +29,7 @@ class TestRegressionCases:
     
     def test_regression_vault_missing_backend(self):
         """Regression: vault decompression without backend should fail."""
-        with pytest.raises(ValueError):
+        with pytest.raises(VaultError):
             self.pc.decompress("cap_v_abc123_key")
 
 
@@ -233,10 +233,13 @@ class TestErrorHandlingAndRecovery:
         class FailingBackend:
             def retrieve(self, key):
                 raise RuntimeError("Backend failure")
+            
+            def retrieve_with_checksum(self, key):
+                raise RuntimeError("Backend failure")
         
         failing_backend = FailingBackend()
         
-        with pytest.raises(ValueError):
+        with pytest.raises(VaultError):
             self.pc.decompress(capsule, vault_backend=failing_backend)
 
 

@@ -5,6 +5,7 @@ import tempfile
 import os
 from promptcapsule.core import PromptCapsule, CapsuleResult
 from promptcapsule.backends import InMemoryBackend, SQLiteBackend
+from promptcapsule.exceptions import VaultError
 
 
 class TestPromptCapsuleBasics:
@@ -26,7 +27,7 @@ class TestPromptCapsuleBasics:
     
     def test_compress_long_prompt_requires_vault(self):
         """Test that long prompts require a vault backend."""
-        with pytest.raises(ValueError, match="vault backend"):
+        with pytest.raises(VaultError, match="vault backend"):
             self.pc.compress(self.long_prompt)
     
     def test_compress_long_prompt_with_vault(self):
@@ -77,7 +78,7 @@ class TestPromptCapsuleBasics:
     
     def test_decompress_vault_without_backend(self):
         """Test that vault capsules require a backend."""
-        with pytest.raises(ValueError, match="vault_backend"):
+        with pytest.raises(VaultError, match="vault_backend"):
             self.pc.decompress("cap_v_abc12345_somekey")
 
 

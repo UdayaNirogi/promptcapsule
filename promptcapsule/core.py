@@ -8,9 +8,7 @@ import zlib
 from dataclasses import dataclass
 from typing import NamedTuple, Optional
 
-
-class IntegrityError(ValueError):
-    """Raised when capsule integrity verification fails (fail-closed)."""
+from .exceptions import FormatError, IntegrityError, SizeLimitError, VaultError
 
 
 class CapsuleResult(NamedTuple):
@@ -60,17 +58,19 @@ class PromptCapsule:
         Compress a prompt into a capsule string.
 
         Raises:
-            TypeError / ValueError: invalid or oversized input
+            TypeError: Input is not a string
+            SizeLimitError: Input exceeds MAX_PROMPT_SIZE
+            VaultError: Vault backend required but not provided
         """
         if not isinstance(text, str):
             raise TypeError("Input text must be a string")
 
         if not text:
-            raise ValueError("Input text cannot be empty")
+            raise FormatError("Input text cannot be empty")
 
         text_bytes = text.encode("utf-8")
         if len(text_bytes) > self.MAX_PROMPT_SIZE:
-            raise ValueError(
+            raise SizeLimitError(
                 f"Prompt exceeds maximum size of {self.MAX_PROMPT_SIZE} bytes"
             )
 
@@ -80,7 +80,7 @@ class PromptCapsule:
             return self._compress_inline(text, checksum)
 
         if vault_backend is None:
-            raise ValueError(
+            raise VaultError(
                 f"Prompt exceeds {self.INLINE_THRESHOLD} bytes and no vault backend provided"
             )
 
@@ -120,10 +120,10 @@ class PromptCapsule:
             raise TypeError("Capsule must be a string")
 
         if not capsule.startswith("cap_"):
-            raise ValueError("Invalid capsule format: must start with 'cap_'")
+            raise FormatError("Invalid capsule format: must start with 'cap_'")
 
         if len(capsule.encode("utf-8")) > self.MAX_PROMPT_SIZE:
-            raise ValueError("Capsule exceeds maximum allowed size")
+            raise SizeLimitError("Capsule exceeds maximum allowed size")
 
         capsule_data = capsule[4:]
 
@@ -131,10 +131,10 @@ class PromptCapsule:
             result = self._decompress_inline(capsule_data)
         elif capsule_data.startswith("v_"):
             if vault_backend is None:
-                raise ValueError("Vault capsule requires vault_backend")
+                raise VaultError("Vault capsule requires vault_backend")
             result = self._decompress_vault(capsule_data, vault_backend)
         else:
-            raise ValueError("Unknown capsule type")
+            raise FormatError("Unknown capsule type")
 
         if strict and not result.verified:
             raise IntegrityError(
@@ -173,20 +173,20 @@ class PromptCapsule:
             # Python < 3.11
             pass
         except zlib.error as e:
-            raise ValueError(f"zlib decompress failed: {e}") from e
+            raise FormatError(f"zlib decompress failed: {e}") from e
 
         deco = zlib.decompressobj()
         try:
             out = deco.decompress(compressed, max_length)
         except zlib.error as e:
-            raise ValueError(f"zlib decompress failed: {e}") from e
+            raise FormatError(f"zlib decompress failed: {e}") from e
         if deco.unconsumed_tail:
-            raise ValueError(
+            raise SizeLimitError(
                 f"Decompressed data exceeds maximum size of {max_length} bytes"
             )
         out += deco.flush()
         if len(out) > max_length:
-            raise ValueError(
+            raise SizeLimitError(
                 f"Decompressed data exceeds maximum size of {max_length} bytes"
             )
         return out
@@ -197,10 +197,10 @@ class PromptCapsule:
         try:
             compressed = base64.b85decode(encoded)
         except Exception as e:
-            raise ValueError(f"Invalid Base85 payload: {e}") from e
+            raise FormatError(f"Invalid Base85 payload: {e}") from e
         # Round-trip: ignores of trailing junk would yield a different re-encode
         if base64.b85encode(compressed).decode("ascii") != encoded:
-            raise ValueError(
+            raise FormatError(
                 "Invalid Base85 payload: trailing junk or non-canonical encoding"
             )
         return compressed
@@ -210,7 +210,7 @@ class PromptCapsule:
         try:
             parts = capsule_data.split("_", 2)
             if len(parts) != 3:
-                raise ValueError("Invalid inline capsule format")
+                raise FormatError("Invalid inline capsule format")
 
             _, checksum_prefix, encoded = parts
             self._validate_checksum_prefix(checksum_prefix)
@@ -230,10 +230,10 @@ class PromptCapsule:
                 original_size=len(text.encode("utf-8")),
                 capsule_size=len(encoded),
             )
-        except IntegrityError:
+        except (IntegrityError, FormatError, SizeLimitError):
             raise
         except Exception as e:
-            raise ValueError(f"Failed to decompress inline capsule: {e}") from e
+            raise FormatError(f"Failed to decompress inline capsule: {e}") from e
 
     def _decompress_vault(
         self,
@@ -244,12 +244,12 @@ class PromptCapsule:
         try:
             parts = capsule_data.split("_", 2)
             if len(parts) != 3:
-                raise ValueError("Invalid vault capsule format")
+                raise FormatError("Invalid vault capsule format")
 
             _, checksum_prefix, key = parts
             self._validate_checksum_prefix(checksum_prefix)
             if not key:
-                raise ValueError("Invalid vault capsule: empty key")
+                raise FormatError("Invalid vault capsule: empty key")
 
             text, stored_checksum = vault_backend.retrieve_with_checksum(key)
             computed_checksum = self._compute_checksum(text)
@@ -273,10 +273,10 @@ class PromptCapsule:
                 original_size=len(text.encode("utf-8")) if bound_ok else 0,
                 capsule_size=len(key),
             )
-        except IntegrityError:
+        except (IntegrityError, FormatError, VaultError):
             raise
         except Exception as e:
-            raise ValueError(f"Failed to decompress vault capsule: {e}") from e
+            raise VaultError(f"Failed to decompress vault capsule: {e}") from e
 
     @classmethod
     def _validate_checksum_prefix(cls, prefix: str) -> None:
