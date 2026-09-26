@@ -2,13 +2,15 @@
 
 import base64
 import hashlib
+import os
 import re
 import warnings
 import zlib
 from dataclasses import dataclass
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, Union
 
-from .exceptions import FormatError, IntegrityError, SizeLimitError, VaultError
+from .exceptions import FormatError, IntegrityError, SignatureError, SizeLimitError, VaultError
+from .integrity import IntegrityChecker
 
 
 class CapsuleResult(NamedTuple):
@@ -53,14 +55,25 @@ class PromptCapsule:
         self,
         text: str,
         vault_backend: Optional["VaultBackend"] = None,
+        *,
+        sign: Union[bool, str, None] = None,
     ) -> str:
         """
         Compress a prompt into a capsule string.
+
+        Args:
+            text: The prompt text to compress
+            vault_backend: Optional vault backend for prompts > INLINE_THRESHOLD
+            sign: Optional HMAC signing:
+                - None (default): No signature
+                - True: Sign using PROMPT_CAPSULE_HMAC_KEY environment variable
+                - str: Sign using provided secret key
 
         Raises:
             TypeError: Input is not a string
             SizeLimitError: Input exceeds MAX_PROMPT_SIZE
             VaultError: Vault backend required but not provided
+            SignatureError: Signing requested but no key available
         """
         if not isinstance(text, str):
             raise TypeError("Input text must be a string")
@@ -76,15 +89,23 @@ class PromptCapsule:
 
         checksum = self._compute_checksum(text)
 
+        # Determine signature key if requested
+        signature_key = self._get_signature_key(sign)
+
         if len(text_bytes) <= self.INLINE_THRESHOLD:
-            return self._compress_inline(text, checksum)
+            capsule = self._compress_inline(text, checksum)
+        else:
+            if vault_backend is None:
+                raise VaultError(
+                    f"Prompt exceeds {self.INLINE_THRESHOLD} bytes and no vault backend provided"
+                )
+            capsule = self._compress_vault(text, vault_backend, checksum)
 
-        if vault_backend is None:
-            raise VaultError(
-                f"Prompt exceeds {self.INLINE_THRESHOLD} bytes and no vault backend provided"
-            )
+        # Add signature if requested
+        if signature_key:
+            capsule = self._add_signature(capsule, text, signature_key)
 
-        return self._compress_vault(text, vault_backend, checksum)
+        return capsule
 
     def decompress(
         self,
@@ -92,6 +113,7 @@ class PromptCapsule:
         vault_backend: Optional["VaultBackend"] = None,
         *,
         strict: bool = True,
+        verify_signature: Union[bool, str, None] = None,
     ) -> CapsuleResult:
         """
         Decompress a capsule string back to the original prompt.
@@ -101,6 +123,11 @@ class PromptCapsule:
             vault_backend: Required for vault capsules
             strict: If True (default), raise IntegrityError when verification fails
                     instead of returning plaintext with verified=False.
+            verify_signature: Optional HMAC signature verification:
+                - None (default): Auto-verify if signature present
+                - True: Verify using PROMPT_CAPSULE_HMAC_KEY environment variable
+                - False: Skip signature verification (not recommended)
+                - str: Verify using provided secret key
                     
         Warning:
             Using strict=False is discouraged and may be deprecated in a future release.
@@ -125,6 +152,22 @@ class PromptCapsule:
         if len(capsule.encode("utf-8")) > self.MAX_PROMPT_SIZE:
             raise SizeLimitError("Capsule exceeds maximum allowed size")
 
+        # Check for signature and verify if present
+        has_signature = "_sig_" in capsule
+        if has_signature:
+            capsule, expected_sig = self._extract_signature(capsule)
+            # Get verification key (auto-detect or explicit)
+            if verify_signature is False:
+                # User explicitly disabled signature verification
+                pass
+            else:
+                sig_key = self._get_signature_key(verify_signature if verify_signature else True)
+                if not sig_key:
+                    raise SignatureError(
+                        "Capsule has signature but no key provided for verification. "
+                        "Set PROMPT_CAPSULE_HMAC_KEY environment variable or pass verify_signature parameter."
+                    )
+
         capsule_data = capsule[4:]
 
         if capsule_data.startswith("i_"):
@@ -135,6 +178,21 @@ class PromptCapsule:
             result = self._decompress_vault(capsule_data, vault_backend)
         else:
             raise FormatError("Unknown capsule type")
+
+        # Verify signature if present and not explicitly disabled
+        if has_signature and verify_signature is not False:
+            sig_key = self._get_signature_key(verify_signature if verify_signature else True)
+            if sig_key:
+                # Expand short signature back to full length for verification
+                # Our _add_signature uses first 32 hex chars, but verify_signature expects full 64
+                computed_sig_full = IntegrityChecker.create_signature(result.text, sig_key)
+                computed_sig_short = computed_sig_full[:32]
+                
+                if computed_sig_short != expected_sig:
+                    raise SignatureError(
+                        f"Signature verification failed (expected: {expected_sig[:16]}..., "
+                        f"computed: {computed_sig_short[:16]}...)"
+                    )
 
         if strict and not result.verified:
             raise IntegrityError(
@@ -321,6 +379,72 @@ class PromptCapsule:
     def _compute_checksum(text: str) -> str:
         """Compute SHA256 checksum of text."""
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _get_signature_key(sign: Union[bool, str, None]) -> Optional[str]:
+        """Get HMAC signature key from parameter or environment.
+        
+        Args:
+            sign: bool (use env), str (explicit key), or None (no signing)
+            
+        Returns:
+            Key string if available, None otherwise
+            
+        Raises:
+            SignatureError: If signing explicitly requested but no key available
+        """
+        if sign is None or sign is False:
+            return None
+        
+        if isinstance(sign, str):
+            return sign
+        
+        # sign is True: use environment variable
+        key = os.environ.get("PROMPT_CAPSULE_HMAC_KEY")
+        if sign is True and not key:
+            raise SignatureError(
+                "Signing requested but PROMPT_CAPSULE_HMAC_KEY environment variable not set"
+            )
+        return key
+
+    @staticmethod
+    def _add_signature(capsule: str, text: str, key: str) -> str:
+        """Add HMAC-SHA256 signature to capsule.
+        
+        Format: cap_X_..._sig_<hmac64>
+        Uses first 32 hex chars (16 bytes) of HMAC for compactness.
+        """
+        signature = IntegrityChecker.create_signature(text, key)
+        # Use first 32 hex chars (16 bytes) for compactness
+        sig_short = signature[:32]
+        return f"{capsule}_sig_{sig_short}"
+
+    @staticmethod
+    def _extract_signature(capsule: str) -> tuple[str, str]:
+        """Extract signature from signed capsule.
+        
+        Returns:
+            (unsigned_capsule, signature) tuple
+            
+        Raises:
+            FormatError: If signature format is invalid
+        """
+        if "_sig_" not in capsule:
+            raise FormatError("Capsule does not contain signature")
+        
+        parts = capsule.rsplit("_sig_", 1)
+        if len(parts) != 2:
+            raise FormatError("Invalid signature format")
+        
+        unsigned, signature = parts
+        
+        # Validate signature format (32 hex chars = 16 bytes)
+        if len(signature) != 32 or not all(c in "0123456789abcdef" for c in signature):
+            raise FormatError(
+                f"Invalid signature format: expected 32 hex chars, got {len(signature)}"
+            )
+        
+        return unsigned, signature
 
 
 class VaultBackend:
