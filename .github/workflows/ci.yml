@@ -84,7 +84,7 @@ jobs:
     
     - name: Install linting tools
       run: |
-        pip install ruff black isort mypy
+        pip install ruff black==25.11.0 isort mypy
     
     - name: Run ruff
       run: |
