@@ -1,10 +1,12 @@
 """Integration and regression tests for PromptCapsule."""
 
+import os
+import tempfile
+
 import pytest
+
 from promptcapsule import PromptCapsule, VaultError
 from promptcapsule.backends import InMemoryBackend, SQLiteBackend
-import tempfile
-import os
 
 
 class TestRegressionCases:

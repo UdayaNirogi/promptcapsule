@@ -1,10 +1,12 @@
 """Unit tests for PromptCapsule core functionality."""
 
-import pytest
-import tempfile
 import os
-from promptcapsule.core import PromptCapsule, CapsuleResult
+import tempfile
+
+import pytest
+
 from promptcapsule.backends import InMemoryBackend, SQLiteBackend
+from promptcapsule.core import CapsuleResult, PromptCapsule
 from promptcapsule.exceptions import VaultError
 
 

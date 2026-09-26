@@ -1,8 +1,10 @@
 """Tests for HMAC signature support in capsules (A1 - Sprint 3)."""
 
 import os
+
 import pytest
-from promptcapsule import PromptCapsule, SignatureError, IntegrityError
+
+from promptcapsule import IntegrityError, PromptCapsule, SignatureError
 from promptcapsule.backends import InMemoryBackend
 
 
