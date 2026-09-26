@@ -161,34 +161,65 @@ class PromptCapsule:
         return f"cap_v_{checksum[: self.CHECKSUM_PREFIX_LEN]}_{key}"
 
     def _safe_zlib_decompress(self, compressed: bytes) -> bytes:
-        """Decompress with an expansion cap (zip-bomb guard).
+        """Decompress with an expansion cap (zip-bomb guard) and trailing junk rejection.
+
+        Security hardening (F13 residual):
+        - Rejects zlib streams with trailing unused bytes
+        - Ensures complete decompression (EOF reached)
+        - Blocks malleability via concatenated or partial streams
 
         ``zlib.decompress(..., max_length=)`` exists only on Python 3.11+.
         Older versions use ``decompressobj`` with the same limit.
         """
         max_length = self.MAX_DECOMPRESSED_SIZE
+        
+        # Python 3.11+ path: simpler but need manual trailing check
         try:
-            return zlib.decompress(compressed, max_length=max_length)
+            decompressed = zlib.decompress(compressed, max_length=max_length)
+            # Verify no trailing junk: re-compress and check exact match
+            recompressed = zlib.compress(decompressed, level=self.COMPRESSION_LEVEL)
+            if recompressed != compressed:
+                raise FormatError(
+                    "zlib stream has trailing junk or non-canonical compression"
+                )
+            return decompressed
         except TypeError:
-            # Python < 3.11
+            # Python < 3.11: use decompressobj for granular control
             pass
         except zlib.error as e:
             raise FormatError(f"zlib decompress failed: {e}") from e
 
+        # Python < 3.11 path: decompressobj with EOF verification
         deco = zlib.decompressobj()
         try:
             out = deco.decompress(compressed, max_length)
         except zlib.error as e:
             raise FormatError(f"zlib decompress failed: {e}") from e
+        
+        # Check for size limit violations
         if deco.unconsumed_tail:
             raise SizeLimitError(
                 f"Decompressed data exceeds maximum size of {max_length} bytes"
             )
+        
         out += deco.flush()
+        
         if len(out) > max_length:
             raise SizeLimitError(
                 f"Decompressed data exceeds maximum size of {max_length} bytes"
             )
+        
+        # F13 hardening: reject if decompressor didn't reach EOF
+        # unused_data contains bytes after a valid zlib stream
+        if deco.unused_data:
+            raise FormatError(
+                f"zlib stream has {len(deco.unused_data)} trailing bytes (malleability attempt)"
+            )
+        
+        # Verify EOF flag is set (stream completed cleanly)
+        if not deco.eof:
+            raise FormatError("zlib stream incomplete or malformed")
+        
         return out
 
     @staticmethod
