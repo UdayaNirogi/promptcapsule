@@ -128,7 +128,7 @@ class PromptCapsule:
                 - True: Verify using PROMPT_CAPSULE_HMAC_KEY environment variable
                 - False: Skip signature verification (not recommended)
                 - str: Verify using provided secret key
-                    
+
         Warning:
             Using strict=False is discouraged and may be deprecated in a future release.
             Fail-closed verification (strict=True) is the recommended practice for
@@ -142,7 +142,7 @@ class PromptCapsule:
                 DeprecationWarning,
                 stacklevel=2
             )
-        
+
         if not isinstance(capsule, str):
             raise TypeError("Capsule must be a string")
 
@@ -187,7 +187,7 @@ class PromptCapsule:
                 # Our _add_signature uses first 32 hex chars, but verify_signature expects full 64
                 computed_sig_full = IntegrityChecker.create_signature(result.text, sig_key)
                 computed_sig_short = computed_sig_full[:32]
-                
+
                 if computed_sig_short != expected_sig:
                     raise SignatureError(
                         f"Signature verification failed (expected: {expected_sig[:16]}..., "
@@ -230,7 +230,7 @@ class PromptCapsule:
         Older versions use ``decompressobj`` with the same limit.
         """
         max_length = self.MAX_DECOMPRESSED_SIZE
-        
+
         # Python 3.11+ path: simpler but need manual trailing check
         try:
             decompressed = zlib.decompress(compressed, max_length=max_length)
@@ -253,31 +253,31 @@ class PromptCapsule:
             out = deco.decompress(compressed, max_length)
         except zlib.error as e:
             raise FormatError(f"zlib decompress failed: {e}") from e
-        
+
         # Check for size limit violations
         if deco.unconsumed_tail:
             raise SizeLimitError(
                 f"Decompressed data exceeds maximum size of {max_length} bytes"
             )
-        
+
         out += deco.flush()
-        
+
         if len(out) > max_length:
             raise SizeLimitError(
                 f"Decompressed data exceeds maximum size of {max_length} bytes"
             )
-        
+
         # F13 hardening: reject if decompressor didn't reach EOF
         # unused_data contains bytes after a valid zlib stream
         if deco.unused_data:
             raise FormatError(
                 f"zlib stream has {len(deco.unused_data)} trailing bytes (malleability attempt)"
             )
-        
+
         # Verify EOF flag is set (stream completed cleanly)
         if not deco.eof:
             raise FormatError("zlib stream incomplete or malformed")
-        
+
         return out
 
     @staticmethod
@@ -383,22 +383,22 @@ class PromptCapsule:
     @staticmethod
     def _get_signature_key(sign: Union[bool, str, None]) -> Optional[str]:
         """Get HMAC signature key from parameter or environment.
-        
+
         Args:
             sign: bool (use env), str (explicit key), or None (no signing)
-            
+
         Returns:
             Key string if available, None otherwise
-            
+
         Raises:
             SignatureError: If signing explicitly requested but no key available
         """
         if sign is None or sign is False:
             return None
-        
+
         if isinstance(sign, str):
             return sign
-        
+
         # sign is True: use environment variable
         key = os.environ.get("PROMPT_CAPSULE_HMAC_KEY")
         if sign is True and not key:
@@ -410,7 +410,7 @@ class PromptCapsule:
     @staticmethod
     def _add_signature(capsule: str, text: str, key: str) -> str:
         """Add HMAC-SHA256 signature to capsule.
-        
+
         Format: cap_X_..._sig_<hmac64>
         Uses first 32 hex chars (16 bytes) of HMAC for compactness.
         """
@@ -422,28 +422,28 @@ class PromptCapsule:
     @staticmethod
     def _extract_signature(capsule: str) -> Tuple[str, str]:
         """Extract signature from signed capsule.
-        
+
         Returns:
             (unsigned_capsule, signature) tuple
-            
+
         Raises:
             FormatError: If signature format is invalid
         """
         if "_sig_" not in capsule:
             raise FormatError("Capsule does not contain signature")
-        
+
         parts = capsule.rsplit("_sig_", 1)
         if len(parts) != 2:
             raise FormatError("Invalid signature format")
-        
+
         unsigned, signature = parts
-        
+
         # Validate signature format (32 hex chars = 16 bytes)
         if len(signature) != 32 or not all(c in "0123456789abcdef" for c in signature):
             raise FormatError(
                 f"Invalid signature format: expected 32 hex chars, got {len(signature)}"
             )
-        
+
         return unsigned, signature
 
 
