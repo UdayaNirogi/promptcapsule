@@ -53,6 +53,10 @@ packages = ["promptcapsule"]
 line-length = 100
 target-version = ['py38']
 
+[tool.isort]
+profile = "black"
+line_length = 100
+
 [tool.mypy]
 python_version = "3.8"
 warn_return_any = true
