@@ -4,8 +4,7 @@ import os
 
 import pytest
 
-from promptcapsule import (FormatError, IntegrityError, PromptCapsule,
-                           SignatureError)
+from promptcapsule import FormatError, IntegrityError, PromptCapsule, SignatureError
 from promptcapsule.backends import InMemoryBackend
 
 
