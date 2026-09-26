@@ -8,8 +8,6 @@ to handle different failure modes appropriately.
 class PromptCapsuleError(Exception):
     """Base exception for all PromptCapsule errors."""
 
-    pass
-
 
 class IntegrityError(PromptCapsuleError, ValueError):
     """
@@ -23,8 +21,6 @@ class IntegrityError(PromptCapsuleError, ValueError):
     the returned text.
     """
 
-    pass
-
 
 class FormatError(PromptCapsuleError, ValueError):
     """
@@ -36,8 +32,6 @@ class FormatError(PromptCapsuleError, ValueError):
     - Checksum prefix wrong length or invalid characters
     - Vault key format violation
     """
-
-    pass
 
 
 class VaultError(PromptCapsuleError):
@@ -51,8 +45,6 @@ class VaultError(PromptCapsuleError):
     - Vault backend misconfiguration
     """
 
-    pass
-
 
 class SizeLimitError(PromptCapsuleError, ValueError):
     """
@@ -64,8 +56,6 @@ class SizeLimitError(PromptCapsuleError, ValueError):
     - Compressed zlib blob > MAX_PROMPT_SIZE
     """
 
-    pass
-
 
 class SignatureError(IntegrityError):
     """
@@ -75,5 +65,3 @@ class SignatureError(IntegrityError):
     failures the same, but allows specific handling of signature issues
     (e.g., key rotation, missing PROMPT_CAPSULE_HMAC_KEY).
     """
-
-    pass
