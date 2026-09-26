@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=75.6.0", "wheel"]
+requires = ["setuptools>=77.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "promptcapsule"
-version = "0.1.7"
+version = "0.2.0"
 description = "Lossless prompt capsules with fail-closed integrity for agent handoffs"
 readme = "README.md"
 license = "MIT"

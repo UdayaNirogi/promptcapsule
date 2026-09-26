@@ -103,6 +103,17 @@ class TestSignedCapsules:
         with pytest.raises(SignatureError, match="Signature verification failed"):
             pc.decompress(capsule, verify_signature="key2")
 
+    def test_signature_error_does_not_leak_valid_mac(self):
+        """A failed verification must not reveal any part of the correct signature."""
+        pc = PromptCapsule()
+        capsule = pc.compress("secret prompt", sign="key1")
+        correct_for_key2 = pc.compress("secret prompt", sign="key2").rsplit("_sig_", 1)[1]
+
+        with pytest.raises(SignatureError) as exc_info:
+            pc.decompress(capsule, verify_signature="key2")
+
+        assert correct_for_key2[:8] not in str(exc_info.value)
+
     def test_tampered_signature_detected(self):
         """Modifying signature should be detected."""
         pc = PromptCapsule()

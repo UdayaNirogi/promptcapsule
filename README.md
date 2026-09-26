@@ -53,9 +53,29 @@ result = pc.decompress(capsule, vault_backend=vault)  # strict=True by default
 - **Vault** (`cap_v_…`): both agents use the same backend (SQLite, GitHub Gist, or S3). The long prompt stays in the vault; only a short key moves between agents.
 - Use `strict=False` only if you intentionally want plaintext with `verified=False` (legacy).
 
-This is a use of the existing API, not a separate agent protocol, and not encryption. The project includes **96 automated tests** (core, backends, integrity, integration, security regressions, and CLI).
+This is a use of the existing API, not a separate agent protocol, and not encryption. The project includes **119 automated tests** (core, backends, integrity, integration, security regressions, signatures, and CLI).
 
 ---
+
+## What's new in 0.2.0 (signed capsules + typed exceptions)
+
+**v0.2.0** (2026-09-26):
+- 🔏 **Optional HMAC-SHA256 signed capsules**: `compress(text, sign="key")` appends a signature; `decompress(capsule, verify_signature="key")` raises `SignatureError` if the key or content does not match. Pass `sign=True` / `verify_signature=True` to read the key from the `PROMPT_CAPSULE_HMAC_KEY` environment variable. Signature checks are constant-time.
+- 🧱 **Typed exceptions**: `PromptCapsuleError` (base), `IntegrityError`, `SignatureError`, `FormatError`, `SizeLimitError`, `VaultError`. `IntegrityError`, `FormatError` and `SizeLimitError` still subclass `ValueError`, so existing `except ValueError` code keeps working.
+- 🛡️ **Stricter zlib validation**: inline capsules with trailing bytes, concatenated streams, or truncated streams are rejected.
+- 🪟 **Windows fixes**: CLI output is ASCII-only, and the SQLite backend closes connections explicitly.
+
+```python
+from promptcapsule import PromptCapsule, SignatureError
+
+pc = PromptCapsule()
+capsule = pc.compress("Summarise the Q3 report", sign="shared-secret")
+
+try:
+    text = pc.decompress(capsule, verify_signature="shared-secret").text
+except SignatureError:
+    ...  # wrong key or tampered capsule: do not use
+```
 
 ## What's new in 0.1.6 (CLI + Trust Model + CI)
 
@@ -138,7 +158,7 @@ PromptCapsule is **packaging + retrieval**, not a full security product:
 |------------|----------------|
 | **Not encryption** | Anyone with the capsule (inline) or vault access can read prompt text |
 | **Not authentication** | No built-in agent identity, API keys, or mTLS |
-| **8-hex checksum is not a MAC** | Truncated SHA-256 proves integrity of content vs prefix; use `IntegrityChecker` HMAC if you need authenticity with a shared secret |
+| **8-hex checksum is not a MAC** | Truncated SHA-256 proves integrity of content vs prefix; use signed capsules (`sign=` / `verify_signature=`, v0.2.0+) if you need authenticity with a shared secret |
 | **Shared vault required** for long prompts | Both agents must reach the same backend with correct ACLs |
 | **Custom backends** | Must implement `retrieve_with_checksum` for full binding |
 | **Demo HTTP “capsule bus”** | Not in this package — if you run one, add auth, size limits, and avoid public list/open yourself |
@@ -624,7 +644,7 @@ Test Results: 81 passed
 - Uses SHA256 (64 hex chars)
 - Stores first 8 chars in capsule for quick verification
 - Prevents accidental corruption detection
-- Does **not** provide cryptographic authentication (future: optional HMAC signing)
+- The checksum alone does **not** provide cryptographic authentication; use optional HMAC-signed capsules (v0.2.0+) for that
 
 ### Compression Levels
 
@@ -636,8 +656,8 @@ Test Results: 81 passed
 
 ## Roadmap
 
-- [ ] CLI tool with full feature parity
-- [ ] HMAC signing for optional authentication
+- [x] CLI tool (v0.1.6)
+- [x] HMAC signing for optional authentication (v0.2.0)
 - [ ] Async backend support
 - [ ] Compression format versioning (for future improvements)
 - [ ] Web UI for managing vaults
@@ -649,7 +669,7 @@ Test Results: 81 passed
 ## Security Considerations
 
 - **Integrity**: ✅ Checksums detect corruption
-- **Authenticity**: ⚠️ No signing (roadmap)
+- **Authenticity**: ✅ Optional HMAC-SHA256 signed capsules with a shared secret (v0.2.0+); unsigned capsules have no authenticity guarantee
 - **Confidentiality**: ⚠️ Vault contents transmitted/stored in plaintext (use HTTPS, encrypted S3, private gists)
 - **Access Control**: Depends on backend (GitHub: private gists, S3: IAM policies)
 
@@ -698,7 +718,7 @@ A: URL shorteners store data on a third-party server. PromptCapsule lets you cho
 A: No — that's a different problem (lossy compression). PromptCapsule is for *inputs* (prompts), not outputs.
 
 **Q: Is the capsule string secure?**
-A: No — treat it like a URL. The 8-char checksum prefix is for integrity, not authentication. If you need signing, that's a roadmap item.
+A: It is not encrypted — treat it like a URL. The 8-char checksum prefix is for integrity, not authentication. If you need to know a capsule came from someone holding a shared secret, use signed capsules (`sign=` / `verify_signature=`, v0.2.0+).
 
 **Q: What about very old Python versions?**
 A: We support Python 3.8+. Older versions should still work (no fancy syntax), but we don't test them.

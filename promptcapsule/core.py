@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import hmac
 import os
 import re
 import warnings
@@ -194,11 +195,9 @@ class PromptCapsule:
                 computed_sig_full = IntegrityChecker.create_signature(result.text, sig_key)
                 computed_sig_short = computed_sig_full[:32]
 
-                if computed_sig_short != expected_sig:
-                    raise SignatureError(
-                        f"Signature verification failed (expected: {expected_sig[:16]}..., "
-                        f"computed: {computed_sig_short[:16]}...)"
-                    )
+                # Never include the computed signature in the error: it would leak a valid MAC.
+                if not hmac.compare_digest(computed_sig_short, expected_sig):
+                    raise SignatureError("Signature verification failed")
 
         if strict and not result.verified:
             raise IntegrityError(
