@@ -157,7 +157,7 @@ tests/
 
 - 📖 Check existing [Issues](https://github.com/UdayaNirogi/promptcapsule/issues)
 - 💬 Start a [Discussion](https://github.com/UdayaNirogi/promptcapsule/discussions)
-- 📧 Email: udaya@example.com
+- 📧 Email: data.pycap@gmail.com
 
 ---
 

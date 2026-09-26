@@ -6,7 +6,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent
-ASSETS = ROOT.parent / "assets"
+ASSETS = ROOT.parent.parent / "assets"
 
 NAVY = (11, 31, 58)
 TEAL = (13, 148, 136)

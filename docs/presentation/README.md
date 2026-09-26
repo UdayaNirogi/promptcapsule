@@ -9,15 +9,15 @@
 | **PromptCapsule_CBatch.pptx** | 8-slide deck with infographics (v0.1.5) |
 | `ppt_architecture.png` | Hybrid architecture infographic |
 | `ppt_quantify.png` | Metrics infographic (81 tests, 10 MiB, fail-closed) |
-| `promptcapsule_infographic.png` | Product overview (also copied to `../assets/`) |
+| `promptcapsule_infographic.png` | Product overview (also copied to `../../assets/`) |
 | `render_infographics.py` | Regenerates the three PNGs with exact metrics |
 | `build_pptx.py` | Rebuilds the PPTX from text + PNGs |
 
 Companion docs:
 
-- `../docs/ABSTRACT.md`
-- `../docs/TECHNICAL_DESIGN.md`
-- `../README.md` — PyPI long description (limits + security)
+- `../ABSTRACT.md`
+- `../TECHNICAL_DESIGN.md`
+- `../../README.md` — PyPI long description (limits + security)
 
 ## Slide outline (8)
 

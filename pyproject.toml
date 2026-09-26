@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 requires-python = ">=3.8"
 authors = [
-    {name = "Udaya Nirogi", email = "udaya@example.com"}
+    {name = "Udaya Nirogi", email = "data.pycap@gmail.com"}
 ]
 keywords = ["prompt", "compression", "retrieval", "ai", "llm", "agents", "agent-to-agent", "integrity", "cli"]
 classifiers = [
@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = []
 

@@ -18,7 +18,7 @@
 ### Commit Details
 ```
 Commit: bde9475
-Author: Udaya Nirogi <udaya@example.com>
+Author: Udaya Nirogi <data.pycap@gmail.com>
 Branch: main
 Files: 25
 Lines: 4,573

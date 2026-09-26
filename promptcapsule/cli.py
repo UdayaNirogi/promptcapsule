@@ -5,34 +5,59 @@ import json
 import sys
 from pathlib import Path
 
-from promptcapsule import IntegrityError, PromptCapsule
+from promptcapsule import IntegrityError, PromptCapsule, SignatureError, __version__
 from promptcapsule.backends import SQLiteBackend
+
+
+def _read_text(path):
+    """Read text exactly: no newline translation, so round trips stay byte-identical."""
+    if path == "-":
+        return sys.stdin.buffer.read().decode("utf-8")
+    return Path(path).read_bytes().decode("utf-8")
+
+
+def _write_text(path, text):
+    if path is None:
+        sys.stdout.flush()
+        sys.stdout.buffer.write(text.encode("utf-8"))
+        sys.stdout.buffer.flush()
+    else:
+        Path(path).write_bytes(text.encode("utf-8"))
+
+
+def _read_capsule(args):
+    if args.file:
+        return _read_text(args.file).strip()
+    return args.capsule
+
+
+def _signing_key(args, flag):
+    """Resolve the HMAC key: --key-file wins, else True (PROMPT_CAPSULE_HMAC_KEY) if flag set."""
+    if getattr(args, "key_file", None):
+        key = Path(args.key_file).read_text(encoding="utf-8").strip()
+        if not key:
+            raise SignatureError(f"Key file is empty: {args.key_file}")
+        return key
+    return True if flag else None
 
 
 def pack_command(args):
     """Pack a prompt into a capsule."""
     pc = PromptCapsule()
 
-    # Read input
     if args.file:
-        if args.file == "-":
-            text = sys.stdin.read()
-        else:
-            text = Path(args.file).read_text(encoding="utf-8")
+        text = _read_text(args.file)
     elif args.text:
         text = args.text
     else:
         print("Error: Either --file or --text required", file=sys.stderr)
         return 1
 
-    # Setup vault backend if needed
-    vault_backend = None
-    if args.vault:
-        vault_backend = SQLiteBackend(args.vault)
+    vault_backend = SQLiteBackend(args.vault) if args.vault else None
 
-    # Compress
     try:
-        capsule = pc.compress(text, vault_backend=vault_backend)
+        sign = _signing_key(args, args.sign)
+        capsule = pc.compress(text, vault_backend=vault_backend, sign=sign)
 
         if args.output:
             Path(args.output).write_text(capsule, encoding="utf-8")
@@ -43,7 +68,8 @@ def pack_command(args):
         if args.verbose:
             mode = "vault" if capsule.startswith("cap_v_") else "inline"
             print(f"Mode: {mode}", file=sys.stderr)
-            print(f"Input size: {len(text)} bytes", file=sys.stderr)
+            print(f"Signed: {'yes' if sign else 'no'}", file=sys.stderr)
+            print(f"Input size: {len(text.encode('utf-8'))} bytes", file=sys.stderr)
             print(f"Capsule size: {len(capsule)} characters", file=sys.stderr)
 
         return 0
@@ -57,32 +83,25 @@ def unpack_command(args):
     """Unpack a capsule to retrieve the original prompt."""
     pc = PromptCapsule()
 
-    # Read capsule
-    if args.file:
-        if args.file == "-":
-            capsule = sys.stdin.read().strip()
-        else:
-            capsule = Path(args.file).read_text(encoding="utf-8").strip()
-    elif args.capsule:
-        capsule = args.capsule
-    else:
+    capsule = _read_capsule(args)
+    if not capsule:
         print("Error: Either --file or --capsule required", file=sys.stderr)
         return 1
 
-    # Setup vault backend if needed
-    vault_backend = None
-    if args.vault:
-        vault_backend = SQLiteBackend(args.vault)
+    vault_backend = SQLiteBackend(args.vault) if args.vault else None
 
-    # Decompress
     try:
-        result = pc.decompress(capsule, vault_backend=vault_backend, strict=not args.no_strict)
+        verify = _signing_key(args, args.require_signature)
+        result = pc.decompress(
+            capsule,
+            vault_backend=vault_backend,
+            strict=not args.no_strict,
+            verify_signature=verify,
+        )
 
+        _write_text(args.output, result.text)
         if args.output:
-            Path(args.output).write_text(result.text, encoding="utf-8")
             print(f"[OK] Text saved to {args.output}")
-        else:
-            print(result.text)
 
         if args.verbose:
             print(f"\nMode: {result.mode}", file=sys.stderr)
@@ -90,12 +109,15 @@ def unpack_command(args):
             print(f"Original size: {result.original_size} bytes", file=sys.stderr)
 
         if not result.verified:
-            print("\n⚠️  Warning: Integrity verification failed!", file=sys.stderr)
+            print("\n[WARN] Integrity verification failed!", file=sys.stderr)
             if not args.no_strict:
                 return 1
 
         return 0
 
+    except SignatureError as e:
+        print(f"[ERROR] Signature Error: {e}", file=sys.stderr)
+        return 1
     except IntegrityError as e:
         print(f"[ERROR] Integrity Error: {e}", file=sys.stderr)
         return 1
@@ -106,21 +128,11 @@ def unpack_command(args):
 
 def inspect_command(args):
     """Inspect a capsule without decompressing (show metadata)."""
-    PromptCapsule()
-
-    # Read capsule
-    if args.file:
-        if args.file == "-":
-            capsule = sys.stdin.read().strip()
-        else:
-            capsule = Path(args.file).read_text(encoding="utf-8").strip()
-    elif args.capsule:
-        capsule = args.capsule
-    else:
+    capsule = _read_capsule(args)
+    if not capsule:
         print("Error: Either --file or --capsule required", file=sys.stderr)
         return 1
 
-    # Parse capsule metadata without full decompression
     try:
         if not capsule.startswith("cap_"):
             print("Error: Invalid capsule format", file=sys.stderr)
@@ -140,6 +152,7 @@ def inspect_command(args):
             "capsule": capsule[:50] + "..." if len(capsule) > 50 else capsule,
             "mode": mode,
             "checksum_prefix": checksum_prefix,
+            "signed": "_sig_" in capsule,
             "capsule_length": len(capsule),
         }
 
@@ -149,6 +162,7 @@ def inspect_command(args):
             print(f"Capsule: {info['capsule']}")
             print(f"Mode: {info['mode']}")
             print(f"Checksum prefix: {info['checksum_prefix']}")
+            print(f"Signed: {'yes' if info['signed'] else 'no'}")
             print(f"Length: {info['capsule_length']} characters")
 
         return 0
@@ -162,29 +176,23 @@ def verify_command(args):
     """Verify capsule integrity without printing contents."""
     pc = PromptCapsule()
 
-    # Read capsule
-    if args.file:
-        if args.file == "-":
-            capsule = sys.stdin.read().strip()
-        else:
-            capsule = Path(args.file).read_text(encoding="utf-8").strip()
-    elif args.capsule:
-        capsule = args.capsule
-    else:
+    capsule = _read_capsule(args)
+    if not capsule:
         print("Error: Either --file or --capsule required", file=sys.stderr)
         return 1
 
-    # Setup vault backend if needed
-    vault_backend = None
-    if args.vault:
-        vault_backend = SQLiteBackend(args.vault)
+    vault_backend = SQLiteBackend(args.vault) if args.vault else None
 
-    # Verify
     try:
-        result = pc.decompress(capsule, vault_backend=vault_backend, strict=True)
+        verify = _signing_key(args, args.require_signature)
+        result = pc.decompress(
+            capsule, vault_backend=vault_backend, strict=True, verify_signature=verify
+        )
 
         if result.verified:
             print("[PASS] Integrity verification PASSED")
+            if verify:
+                print("[PASS] Signature verification PASSED")
             if args.verbose:
                 print(f"Mode: {result.mode}")
                 print(f"Checksum: {result.checksum[:16]}...")
@@ -194,12 +202,23 @@ def verify_command(args):
             print("[FAIL] Integrity verification FAILED")
             return 1
 
+    except SignatureError as e:
+        print(f"[FAIL] Signature verification FAILED: {e}")
+        return 1
     except IntegrityError as e:
         print(f"[FAIL] Integrity verification FAILED: {e}")
         return 1
     except Exception as e:  # noqa: BLE001
         print(f"Error: {e}", file=sys.stderr)
         return 1
+
+
+def _add_key_file(parser):
+    parser.add_argument(
+        "--key-file",
+        metavar="PATH",
+        help="Read the HMAC key from this file (implies signing / signature required)",
+    )
 
 
 def main():
@@ -212,61 +231,78 @@ def main():
 Examples:
   # Pack a prompt from file
   promptcapsule pack --file prompt.txt
-  
+
   # Pack from stdin
   echo "You are a helpful assistant" | promptcapsule pack --file -
-  
+
   # Pack with vault storage
   promptcapsule pack --file long_prompt.txt --vault prompts.db
-  
-  # Unpack a capsule
-  promptcapsule unpack --capsule "cap_i_a8f3b2_..."
-  
-  # Unpack from file
-  promptcapsule unpack --file capsule.txt --vault prompts.db
-  
-  # Verify integrity
-  promptcapsule verify --capsule "cap_i_a8f3b2_..."
-  
+
+  # Sign with the key in PROMPT_CAPSULE_HMAC_KEY (or use --key-file PATH)
+  promptcapsule pack --file prompt.txt --sign
+
+  # Unpack, rejecting unsigned or tampered capsules
+  promptcapsule unpack --file capsule.txt --require-signature
+
+  # Verify integrity (and signature) without printing the prompt
+  promptcapsule verify --file capsule.txt --key-file hmac.key
+
   # Inspect capsule metadata
-  promptcapsule inspect --capsule "cap_i_a8f3b2_..." --json
+  promptcapsule inspect --file capsule.txt --json
+
+Keys are never taken as command-line arguments, so they do not end up in
+shell history or process listings.
         """,
     )
 
-    parser.add_argument("--version", action="version", version="promptcapsule 0.1.5")
+    parser.add_argument("--version", action="version", version=f"promptcapsule {__version__}")
 
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
 
-    # pack command
     pack_parser = subparsers.add_parser("pack", help="Pack a prompt into a capsule")
     pack_parser.add_argument("--file", "-f", help="Input file (use - for stdin)")
     pack_parser.add_argument("--text", "-t", help="Input text directly")
     pack_parser.add_argument("--output", "-o", help="Output file (default: stdout)")
     pack_parser.add_argument("--vault", "-v", help="Vault database path (for long prompts)")
+    pack_parser.add_argument(
+        "--sign",
+        action="store_true",
+        help="Sign the capsule with the key in PROMPT_CAPSULE_HMAC_KEY",
+    )
+    _add_key_file(pack_parser)
     pack_parser.add_argument("--verbose", action="store_true", help="Show detailed info")
 
-    # unpack command
     unpack_parser = subparsers.add_parser("unpack", help="Unpack a capsule to retrieve prompt")
     unpack_parser.add_argument("--file", "-f", help="Capsule file (use - for stdin)")
     unpack_parser.add_argument("--capsule", "-c", help="Capsule string directly")
     unpack_parser.add_argument("--output", "-o", help="Output file (default: stdout)")
     unpack_parser.add_argument("--vault", "-v", help="Vault database path (for vault capsules)")
     unpack_parser.add_argument(
+        "--require-signature",
+        action="store_true",
+        help="Reject unsigned capsules; verify with the key in PROMPT_CAPSULE_HMAC_KEY",
+    )
+    _add_key_file(unpack_parser)
+    unpack_parser.add_argument(
         "--no-strict", action="store_true", help="Allow unverified capsules (not recommended)"
     )
     unpack_parser.add_argument("--verbose", action="store_true", help="Show detailed info")
 
-    # inspect command
     inspect_parser = subparsers.add_parser("inspect", help="Inspect capsule metadata")
     inspect_parser.add_argument("--file", "-f", help="Capsule file (use - for stdin)")
     inspect_parser.add_argument("--capsule", "-c", help="Capsule string directly")
     inspect_parser.add_argument("--json", action="store_true", help="Output as JSON")
 
-    # verify command
     verify_parser = subparsers.add_parser("verify", help="Verify capsule integrity")
     verify_parser.add_argument("--file", "-f", help="Capsule file (use - for stdin)")
     verify_parser.add_argument("--capsule", "-c", help="Capsule string directly")
     verify_parser.add_argument("--vault", "-v", help="Vault database path (for vault capsules)")
+    verify_parser.add_argument(
+        "--require-signature",
+        action="store_true",
+        help="Reject unsigned capsules; verify with the key in PROMPT_CAPSULE_HMAC_KEY",
+    )
+    _add_key_file(verify_parser)
     verify_parser.add_argument("--verbose", action="store_true", help="Show detailed info")
 
     args = parser.parse_args()
@@ -275,7 +311,6 @@ Examples:
         parser.print_help()
         return 1
 
-    # Execute command
     if args.command == "pack":
         return pack_command(args)
     elif args.command == "unpack":

@@ -1,6 +1,6 @@
 # PromptCapsule — Trust & Threat Model
 
-**Version:** 0.1.5  
+**Version:** 0.2.1  
 **Last Updated:** 2026-09-24  
 **Status:** Living document
 
@@ -60,7 +60,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 
 **Guarantee:** Capsule decompression is bounded to prevent denial-of-service.
 
-**Limits (v0.1.5):**
+**Limits:**
 | Resource | Limit | Enforcement |
 |----------|-------|-------------|
 | Max prompt size | 10 MiB | Checked on compress |
@@ -121,14 +121,14 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 - Use TLS for transport (HTTPS, secure WebSocket)
 - Use vault backends with encryption at rest (AWS S3 SSE, SQLCipher)
 - Consider out-of-band encryption if confidentiality is required
-- Future: Optional AEAD encryption (Epic A8, not yet implemented)
+- Future: Optional AEAD encryption (not yet implemented)
 
 ### ❌ 2.2 Authentication (No Identity Verification)
 
 **Not guaranteed:** Capsules do **not** prove who created them.
 
 **Why:**
-- No digital signatures (yet)
+- Signed capsules (v0.2.0+) prove possession of a shared secret, not the identity of an individual agent
 - No public key cryptography
 - No identity binding
 
@@ -140,7 +140,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 **Mitigation:**
 - Use authenticated transport channels (mTLS, API keys)
 - Implement agent authentication at the application layer
-- Future: Optional HMAC signing with shared secret (Epic A1, in progress)
+- Use signed capsules (`sign=` / `verify_signature=`) so only holders of the shared secret can create accepted capsules
 
 ### ❌ 2.3 Authorization (No Access Control)
 
@@ -158,7 +158,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 
 **Mitigation:**
 - Implement authorization at the vault layer (S3 IAM, Gist token scoping)
-- Use short-lived capsules with TTL (Epic B6, not yet implemented)
+- Use short-lived capsules with TTL (not yet implemented)
 - Treat capsules as bearer tokens (protect like passwords)
 
 ### ❌ 2.4 Message Authentication Code (MAC)
@@ -172,14 +172,13 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 
 **Implications:**
 - ❌ A determined attacker could find collisions for the 8-hex prefix
-- ❌ Capsules are **not cryptographically signed**
+- ❌ Unsigned capsules are **not cryptographically authenticated**
 - ❌ Integrity check is **not proof against motivated attackers**
 
 **Mitigation:**
-- Use signed capsules when available (Epic A1, HMAC with shared secret)
+- Use signed capsules (HMAC-SHA256 with a shared secret, v0.2.0+). Receivers must pass the key: with a key, unsigned or signature-stripped capsules are rejected (v0.2.1+)
 - Combine with authenticated transport (TLS, API keys)
 - Document limitation to security reviewers
-- Future: Full SHA-256 or HMAC-SHA256 in capsule format
 
 ### ❌ 2.5 Replay Protection
 
@@ -196,7 +195,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 - ❌ Capsules are valid forever by default
 
 **Mitigation:**
-- Implement TTL at the vault layer (Epic B6)
+- Implement TTL at the vault layer
 - Use application-layer replay tokens (session IDs, nonces)
 - Pair capsules with out-of-band challenge-response
 
@@ -206,7 +205,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 
 **Why:**
 - zlib decompression time varies with payload size
-- Checksum comparison is not constant-time (except in HMAC path)
+- Checksum and signature comparisons are constant-time (`hmac.compare_digest`), but other steps are not
 - Base85 decode timing varies
 
 **Implications:**
@@ -214,7 +213,6 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 - ❌ Not suitable for high-security cryptographic applications
 
 **Mitigation:**
-- Use constant-time comparison for checksums (Epic A5)
 - Treat capsules as low-to-medium trust boundary
 - Use proper cryptographic libraries for high-security scenarios
 
@@ -271,14 +269,14 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 **Scenario:** Attacker intercepts capsule in transit (no TLS), modifies payload, recomputes checksum.
 
 **PromptCapsule Response:**
-- ❌ Capsule format has no signature → attacker can forge valid capsule
-- ❌ Receiver accepts modified capsule
+- ❌ Unsigned capsules: attacker can forge a valid capsule and the receiver accepts it
+- ✅ Signed capsules verified with the key: forgery and signature stripping raise `SignatureError`
 
-**Risk Level:** **HIGH** — **Not mitigated by library**.
+**Risk Level:** **HIGH** for unsigned capsules — mitigated by signed capsules when receivers pass the key.
 
 **Mitigation:**
 - **MUST** use TLS for transport
-- Consider HMAC-signed capsules (Epic A1)
+- Use signed capsules and always verify with the key
 - Use authenticated channels (mTLS, API keys)
 
 ---
@@ -314,7 +312,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 **Mitigation:**
 - Implement TTL at application layer
 - Use session-specific capsules (pair with nonces)
-- Vault backends can implement expiry (Epic B6)
+- Vault backends can implement expiry
 
 ---
 
@@ -329,7 +327,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 **Risk Level:** **MEDIUM** — Partially mitigated (full checksum still verified).
 
 **Mitigation:**
-- Use HMAC-signed capsules (Epic A1)
+- Use signed capsules
 - Document limitation to security reviewers
 - Future: Increase prefix length or use full SHA-256 in format
 
@@ -359,7 +357,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 **Trust Model:**
 - ✅ Tamper-evident (checksum)
 - ❌ Not confidential (Base85-encoded)
-- ❌ Not authenticated (no signature)
+- ❌ Not authenticated unless signed (`sign=`) and verified with the key
 
 **Recommended Use:**
 - Short prompts shared between trusted agents
@@ -422,6 +420,8 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 - [x] Empty/short checksum prefix rejection
 - [x] Vault key-swap returns empty text (even `strict=False`)
 - [x] `DeprecationWarning` on `strict=False` usage
+- [x] Optional HMAC-SHA256 signed capsules, constant-time verification (v0.2.0)
+- [x] Key supplied → signature required; empty keys rejected (v0.2.1)
 
 ### 🔲 Application-Level Mitigations (Required)
 
@@ -436,11 +436,9 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 
 ### 🔮 Future Library Enhancements (Roadmap)
 
-- [ ] HMAC-signed capsules (Epic A1, v0.2.0)
-- [ ] Constant-time checksum comparison (Epic A5)
-- [ ] Optional AEAD encryption (Epic A8)
-- [ ] Capsule TTL / expiry metadata (Epic D7)
-- [ ] Authenticated capsule bus (Epic B1-B5)
+- [ ] Optional AEAD encryption
+- [ ] Capsule TTL / expiry metadata
+- [ ] Authenticated capsule bus
 
 ---
 
@@ -451,7 +449,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 If you discover a security vulnerability in PromptCapsule:
 
 1. **DO NOT** open a public GitHub issue
-2. Email: `udaya.nirogi@example.com` (or create private security advisory)
+2. Email `data.pycap@gmail.com` or open a [private security advisory](https://github.com/UdayaNirogi/promptcapsule/security/advisories/new)
 3. Include:
    - Description of the issue
    - Steps to reproduce
@@ -475,8 +473,10 @@ Contributors who report valid security issues will be credited here (with permis
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.2.1 | 2026-09-26 | Signature required when a key is supplied; empty keys rejected |
+| 0.2.0 | 2026-09-26 | Optional HMAC-SHA256 signed capsules |
 | 0.1.5 | 2026-09-24 | Initial TRUST.md; documents all current guarantees/limitations |
-| 0.1.4 | 2026-09-22 | Added F07, F11, F13 fixes (not documented in TRUST.md at time) |
+| 0.1.4 | 2026-09-22 | Base85 round-trip validation, vault key-swap hardening, Gist owner check |
 | 0.1.2 | 2026-09-20 | Added fail-closed default, size limits |
 
 ---

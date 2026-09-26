@@ -1,29 +1,36 @@
 """Tests for CLI functionality."""
 
+import os
 import subprocess
+import sys
 
 import pytest
 
-# Path to the CLI module
-CLI_MODULE = ["python3", "-m", "promptcapsule.cli"]
+from promptcapsule import __version__
+
+CLI_MODULE = [sys.executable, "-m", "promptcapsule.cli"]
 
 
-def run_cli(*args):
+def run_cli(*args, hmac_key=None):
     """Run CLI command and return result."""
+    env = {k: v for k, v in os.environ.items() if k != "PROMPT_CAPSULE_HMAC_KEY"}
+    if hmac_key is not None:
+        env["PROMPT_CAPSULE_HMAC_KEY"] = hmac_key
     result = subprocess.run(
         CLI_MODULE + list(args),
         capture_output=True,
         text=True,
         check=False,
+        env=env,
     )
     return result
 
 
 def test_cli_version():
-    """Test --version flag."""
+    """--version reports the installed package version."""
     result = run_cli("--version")
     assert result.returncode == 0
-    assert "0.1.5" in result.stdout
+    assert result.stdout.strip() == f"promptcapsule {__version__}"
 
 
 def test_cli_help():
@@ -33,6 +40,27 @@ def test_cli_help():
     assert "PromptCapsule CLI" in result.stdout
     assert "pack" in result.stdout
     assert "unpack" in result.stdout
+
+
+@pytest.mark.parametrize("text", ["line one\nline two\n", "crlf\r\nkept\r\n", "caf\u00e9 \u2713"])
+def test_pipe_roundtrip_is_byte_exact(text):
+    """stdin -> pack -> unpack -> stdout must not add newlines or translate line endings."""
+    env = {k: v for k, v in os.environ.items() if k != "PROMPT_CAPSULE_HMAC_KEY"}
+    packed = subprocess.run(
+        CLI_MODULE + ["pack", "--file", "-"],
+        input=text.encode("utf-8"),
+        capture_output=True,
+        check=True,
+        env=env,
+    )
+    unpacked = subprocess.run(
+        CLI_MODULE + ["unpack", "--file", "-"],
+        input=packed.stdout,
+        capture_output=True,
+        check=True,
+        env=env,
+    )
+    assert unpacked.stdout == text.encode("utf-8")
 
 
 def test_pack_unpack_roundtrip(tmp_path):
@@ -198,6 +226,64 @@ def test_missing_arguments():
     result = run_cli("unpack")
     assert result.returncode == 1
     assert "Error" in result.stderr
+
+
+class TestCLISigning:
+    def test_sign_with_env_key_roundtrip(self):
+        capsule = run_cli("pack", "--text", "hello", "--sign", hmac_key="s3cret").stdout.strip()
+        assert "_sig_" in capsule
+
+        result = run_cli("unpack", "--capsule", capsule, "--require-signature", hmac_key="s3cret")
+        assert result.returncode == 0
+        assert result.stdout.strip() == "hello"
+
+    def test_sign_with_key_file_roundtrip(self, tmp_path):
+        key_file = tmp_path / "hmac.key"
+        key_file.write_text("file-secret\n")
+
+        capsule = run_cli("pack", "--text", "hello", "--key-file", str(key_file)).stdout.strip()
+        assert "_sig_" in capsule
+
+        result = run_cli("verify", "--capsule", capsule, "--key-file", str(key_file))
+        assert result.returncode == 0
+        assert "Signature verification PASSED" in result.stdout
+
+    def test_stripped_signature_rejected(self):
+        capsule = run_cli("pack", "--text", "hello", "--sign", hmac_key="s3cret").stdout.strip()
+        stripped = capsule.rsplit("_sig_", 1)[0]
+
+        unpack = run_cli("unpack", "--capsule", stripped, "--require-signature", hmac_key="s3cret")
+        assert unpack.returncode == 1
+        assert "hello" not in unpack.stdout
+        assert "unsigned" in unpack.stderr
+
+        verify = run_cli("verify", "--capsule", stripped, "--require-signature", hmac_key="s3cret")
+        assert verify.returncode == 1
+        assert "Signature verification FAILED" in verify.stdout
+
+    def test_wrong_key_rejected(self):
+        capsule = run_cli("pack", "--text", "hello", "--sign", hmac_key="right").stdout.strip()
+        result = run_cli("unpack", "--capsule", capsule, "--require-signature", hmac_key="wrong")
+        assert result.returncode == 1
+        assert "hello" not in result.stdout
+
+    def test_sign_without_key_fails(self):
+        result = run_cli("pack", "--text", "hello", "--sign")
+        assert result.returncode == 1
+        assert "PROMPT_CAPSULE_HMAC_KEY" in result.stderr
+
+    def test_empty_key_file_fails(self, tmp_path):
+        key_file = tmp_path / "empty.key"
+        key_file.write_text("\n")
+        result = run_cli("pack", "--text", "hello", "--key-file", str(key_file))
+        assert result.returncode == 1
+        assert "empty" in result.stderr
+
+    def test_inspect_reports_signed(self):
+        capsule = run_cli("pack", "--text", "hello", "--sign", hmac_key="k").stdout.strip()
+        assert "Signed: yes" in run_cli("inspect", "--capsule", capsule).stdout
+        plain = run_cli("pack", "--text", "hello").stdout.strip()
+        assert "Signed: no" in run_cli("inspect", "--capsule", plain).stdout
 
 
 if __name__ == "__main__":

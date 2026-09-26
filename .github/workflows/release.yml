@@ -1,0 +1,83 @@
+name: GitHub Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to release (e.g. v0.2.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+    # Release notes always come from the current CHANGELOG, even for older tags.
+    - name: Check out default branch (changelog)
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.repository.default_branch }}
+        path: meta
+        fetch-depth: 0
+
+    - name: Check out tag (sources)
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ env.TAG }}
+        path: src
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Check tag matches package version
+      working-directory: src
+      run: |
+        VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+        if [ "v$VERSION" != "$TAG" ]; then
+          echo "::error::Tag $TAG does not match pyproject.toml version $VERSION"
+          exit 1
+        fi
+        echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+    - name: Build and check distributions
+      working-directory: src
+      run: |
+        pip install build twine
+        python -m build
+        twine check dist/*
+
+    - name: Extract release notes
+      run: |
+        awk -v v="$VERSION" '
+          $0 ~ "^## \\[" v "\\]" { found = 1; next }
+          found && /^## \[/ { exit }
+          found { print }
+        ' meta/CHANGELOG.md > notes.md
+        if [ ! -s notes.md ]; then
+          echo "::error::No CHANGELOG.md entry for $VERSION"
+          exit 1
+        fi
+        echo "" >> notes.md
+        echo "Install: \`pip install promptcapsule==$VERSION\`" >> notes.md
+
+    - name: Create or update GitHub Release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        HIGHEST=$(git -C meta tag --list 'v*' --sort=-v:refname | head -n 1)
+        LATEST=$([ "$TAG" = "$HIGHEST" ] && echo true || echo false)
+        if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md --latest="$LATEST"
+          gh release upload "$TAG" src/dist/* --repo "$GITHUB_REPOSITORY" --clobber
+        else
+          gh release create "$TAG" src/dist/* --repo "$GITHUB_REPOSITORY" \
+            --title "PromptCapsule $VERSION" --notes-file notes.md --verify-tag --latest="$LATEST"
+        fi
