@@ -68,8 +68,9 @@ jobs:
     - name: Check dependencies for vulnerabilities
       run: |
         pip install -e .
-        # Safety check may fail on no dependencies or API rate limits
-        safety check || echo "Safety check skipped (no runtime dependencies or API unavailable)"
+        # Use 'safety scan' (modern command; 'check' is deprecated as of June 2024)
+        # May skip if no runtime dependencies or API unavailable
+        safety scan --output text || echo "Safety scan skipped (no runtime dependencies or API unavailable)"
 
   lint:
     runs-on: ubuntu-latest
