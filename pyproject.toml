@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "promptcapsule"
-version = "0.3.2"
+version = "0.3.3"
 description = "Pass the prompt, not the payload. Lossless prompt capsules with fail-closed integrity for agent-to-agent handoff."
 readme = "README.md"
 license = "MIT"

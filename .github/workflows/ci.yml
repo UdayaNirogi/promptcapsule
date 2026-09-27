@@ -141,6 +141,15 @@ jobs:
       run: |
         pip install twine
         twine check dist/*
+
+    - name: Run the test suite from the source distribution
+      run: |
+        mkdir /tmp/sdist
+        tar xzf dist/*.tar.gz -C /tmp/sdist --strip-components=1
+        cd /tmp/sdist
+        python -m venv /tmp/sdist-venv
+        /tmp/sdist-venv/bin/pip install . pytest
+        /tmp/sdist-venv/bin/python -m pytest -q tests
     
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4

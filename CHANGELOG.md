@@ -2,6 +2,15 @@
 
 All notable changes to PromptCapsule. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.3.3] - 2026-09-27
+
+Packaging fix. No code behaviour changes; the capsule format is unchanged.
+
+### Fixed
+- The source distribution now includes `tests/conftest.py` and `tests/__init__.py`. Without them, running the test suite from the sdist (as conda-forge and other distributors do) gave 7 errors, and some tests used the real `~/.promptcapsule` vault instead of a temporary one.
+- The sdist also ships `SPEC.md`, `TRUST.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `llms.txt` and the examples.
+- CI now builds the sdist and runs the full test suite from it, so a missing file fails the build.
+
 ## [0.3.2] - 2026-09-27
 
 Documentation accuracy release. No code behaviour changes; the capsule format is unchanged.
