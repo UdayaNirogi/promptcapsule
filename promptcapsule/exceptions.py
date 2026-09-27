@@ -13,8 +13,10 @@ class IntegrityError(PromptCapsuleError, ValueError):
     """
     Raised when capsule integrity verification fails.
 
-    This is the fail-closed signal: the capsule string was tampered with,
-    corrupted, or does not match its claimed checksum/signature.
+    This is the fail-closed signal: the capsule was corrupted or altered and
+    does not match its checksum or signature. The unsigned checksum is not
+    keyed, so it catches accidental corruption; only a signature verified with
+    the key catches deliberate tampering.
 
     In strict=True mode (default), decompression raises this immediately.
     Callers should treat this as "unsafe to use" and never fall back to
@@ -28,9 +30,10 @@ class FormatError(PromptCapsuleError, ValueError):
 
     Examples:
     - Missing or malformed prefix (cap_i_, cap_v_)
-    - Invalid Base85 encoding
-    - Checksum prefix wrong length or invalid characters
-    - Vault key format violation
+    - Invalid Base85 encoding or zlib data
+    - Empty payload or vault key
+
+    A malformed checksum prefix raises IntegrityError, not FormatError.
     """
 
 
@@ -41,7 +44,6 @@ class VaultError(PromptCapsuleError):
     Examples:
     - Key not found in vault
     - Network/auth failure reaching remote vault (S3, Gist)
-    - Vault storage quota exceeded
     - Vault backend misconfiguration
     """
 

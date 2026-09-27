@@ -15,14 +15,14 @@ assert unpack(capsule) == prompt
 print("✓ Exact reconstruction verified")
 print()
 
-# Tampering is rejected instead of returning corrupted text
-print("--- Testing integrity protection ---")
-tampered = capsule[:-5] + "XXXXX"
+# A corrupted capsule is rejected instead of returning damaged text
+print("--- Testing corruption detection ---")
+corrupted = capsule[:-5] + "XXXXX"
 try:
-    unpack(tampered)
+    unpack(corrupted)
     print("⚠️  Should not reach here - integrity should fail!")
 except PromptCapsuleError as e:
-    print(f"✓ Tampered capsule rejected: {e}")
+    print(f"✓ Corrupted capsule rejected: {e}")
 print()
 
 # The PromptCapsule class exposes details about the capsule

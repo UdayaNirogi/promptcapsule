@@ -271,8 +271,8 @@ Examples:
   # Inspect capsule metadata
   promptcapsule inspect --file capsule.txt --json
 
-Keys are never taken as command-line arguments, so they do not end up in
-shell history or process listings.
+Keys are never taken as command-line arguments, so they do not appear in
+process listings. Prefer --key-file over typing the key into an interactive shell.
         """,
     )
 

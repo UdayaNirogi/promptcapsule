@@ -1,7 +1,7 @@
 # PromptCapsule — Trust & Threat Model
 
-**Version:** 0.3.1  
-**Last Updated:** 2026-09-24  
+**Version:** 0.3.2  
+**Last Updated:** 2026-09-27  
 **Status:** Living document
 
 ---
@@ -23,22 +23,24 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 
 ### ✅ 1.1 Integrity Verification
 
-**Guarantee:** PromptCapsule detects **unintentional corruption** and **basic tampering** of capsule payloads.
+**Guarantee:** PromptCapsule detects **accidental corruption** of capsules. Deliberate tampering is detected **only for signed capsules verified with the key** (§2.4).
 
 **Mechanism:**
 - SHA-256 checksum computed over the original prompt text
-- 8-hex prefix embedded in the capsule string (visible)
-- Full checksum verified on decompress
+- The first 8 hex characters (32 bits) are embedded in the capsule string (visible, not keyed)
+- Inline capsules: the decoded text's SHA-256 must start with that prefix
+- Vault capsules: the text's full SHA-256 must equal the checksum stored next to it in the vault, and start with the capsule's prefix
 - Fail-closed by default (`strict=True` raises `IntegrityError`)
 
 **What this protects against:**
 - ✅ Accidental corruption (network errors, copy-paste mistakes)
-- ✅ Naive tampering (editing capsule string manually)
+- ✅ Manual edits to a capsule string that don't re-pack the text
 - ✅ Truncation or malformed capsules
 - ✅ Non-canonical Base85 encodings with trailing junk
 
 **What this does NOT protect against (see §2):**
-- ❌ Motivated attackers with knowledge of SHA-256 weaknesses
+- ❌ Deliberate tampering with unsigned capsules: no SHA-256 weakness is needed, anyone can pack new text or recompute the checksum
+- ❌ Someone who can write to the vault, for unsigned vault capsules (§3.6)
 - ❌ MITM attacks without additional transport security
 - ❌ Key disclosure in shared vault scenarios
 
@@ -47,12 +49,12 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 **Guarantee:** Original prompt text is reconstructed **byte-for-byte** if integrity check passes.
 
 **Mechanism:**
-- Inline mode: zlib compression + Base85 encoding (deterministic)
+- Inline mode: the UTF-8 text is carried inside the capsule (zlib + Base85)
 - Vault mode: text stored in backend; retrieved by key
 - UTF-8 round-trip verified
 
 **What this protects against:**
-- ✅ Lossy semantic compression confusion
+- ✅ Rewritten or summarised prompts: the text is never altered
 - ✅ Encoding mismatch errors
 - ✅ Partial capsule transmission
 
@@ -75,7 +77,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 
 ### ✅ 1.4 Vault Key Unpredictability
 
-**Guarantee:** Vault keys are **unguessable**.
+**Guarantee:** Vault keys created by the built-in backends are **unguessable**. Custom backends are responsible for their own keys.
 
 **Mechanism:**
 - Generated using `secrets.token_urlsafe(nbytes=16)`
@@ -96,7 +98,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 
 **What this protects against:**
 - ✅ Silent data corruption in agent handoffs
-- ✅ Accidental use of tampered prompts
+- ✅ Accidental use of corrupted prompts
 
 **Note:** `strict=False` is **discouraged** and emits `DeprecationWarning` (v0.1.5+).
 
@@ -166,14 +168,15 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 **Not guaranteed:** 8-hex checksum is **not a MAC**.
 
 **Why:**
-- Only 8 hex characters (32 bits) of SHA-256 are visible in the capsule
-- Full SHA-256 is verified, but no secret key is involved
-- Collision resistance is weaker with truncated hash
+- Only 8 hex characters (32 bits) of SHA-256 are in the capsule, and no secret key is involved
+- Inline capsules compare only that 32-bit prefix
+- Vault capsules compare the full SHA-256, but against the checksum stored in the vault, which anyone who can write to the vault can also replace
 
 **Implications:**
-- ❌ A determined attacker could find collisions for the 8-hex prefix
+- ❌ Anyone can create an unsigned capsule that passes the check: they pack their own text
+- ❌ Matching a given 8-hex prefix takes about 2^32 SHA-256 attempts: minutes on a laptop, seconds on a GPU
 - ❌ Unsigned capsules are **not cryptographically authenticated**
-- ❌ Integrity check is **not proof against motivated attackers**
+- ❌ The checksum detects accidents, **not deliberate tampering**
 
 **Mitigation:**
 - Use signed capsules (HMAC-SHA256 with a shared secret, v0.2.0+). Receivers must pass the key: with a key, unsigned or signature-stripped capsules are rejected (v0.2.1+)
@@ -205,7 +208,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 
 **Why:**
 - zlib decompression time varies with payload size
-- Checksum and signature comparisons are constant-time (`hmac.compare_digest`), but other steps are not
+- Signature comparisons are constant-time (`hmac.compare_digest`); checksum comparisons are not (the checksum is not secret)
 - Base85 decode timing varies
 
 **Implications:**
@@ -244,7 +247,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 **Scenario:** Network glitch corrupts a capsule during transmission.
 
 **PromptCapsule Response:**
-- ✅ Detected by checksum verification
+- ✅ Detected by checksum verification (a random change slips past a 32-bit check with probability about 1 in 4 billion, and most corruption already breaks decoding)
 - ✅ `IntegrityError` raised (fail-closed)
 - ✅ Agent rejects capsule
 
@@ -254,13 +257,13 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 
 ### 3.2 Naive Tampering (Low Risk)
 
-**Scenario:** Developer manually edits capsule string to change prompt.
+**Scenario:** Someone edits a capsule string by hand without re-packing the text.
 
 **PromptCapsule Response:**
 - ✅ Checksum mismatch detected
 - ✅ `IntegrityError` raised
 
-**Risk Level:** **LOW** — Well mitigated.
+**Risk Level:** **LOW** — Well mitigated. This is not protection against deliberate tampering: anyone who re-packs their own text gets a valid unsigned capsule (§3.3).
 
 ---
 
@@ -318,18 +321,19 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 
 ### 3.6 8-Hex Collision Attack (Medium Risk)
 
-**Scenario:** Attacker finds two prompts with the same 8-hex prefix, swaps payloads.
+**Scenario:** An attacker who cannot change the capsule string, but can write to the vault (or substitute an inline payload), supplies different text whose SHA-256 starts with the capsule's 8-hex prefix.
 
 **PromptCapsule Response:**
-- ❌ 8-hex prefix collision is feasible (~2^32 attempts)
-- ✅ Full SHA-256 verification catches mismatch → `IntegrityError` raised
+- ❌ Finding such text takes about 2^32 SHA-256 attempts (minutes on a laptop)
+- ❌ Unsigned capsules accept it: inline capsules check only the prefix, and in the vault the attacker also replaces the stored full checksum
+- ✅ Signed capsules verified with the key reject it (`SignatureError`)
 
-**Risk Level:** **MEDIUM** — Partially mitigated (full checksum still verified).
+**Risk Level:** **HIGH** for unsigned capsules when the attacker can write to the vault — mitigated by signing.
 
 **Mitigation:**
-- Use signed capsules
-- Document limitation to security reviewers
-- Future: Increase prefix length or use full SHA-256 in format
+- Sign capsules and always verify with the key
+- Restrict vault write access (ACLs, IAM, file permissions)
+- A longer checksum would need a new capsule type (format v2); signing already covers this case
 
 ---
 
@@ -355,7 +359,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 ### 4.1 Inline Capsules (`cap_i_...`)
 
 **Trust Model:**
-- ✅ Tamper-evident (checksum)
+- ✅ Detects accidental corruption (checksum); tamper-evident only when signed and verified with the key
 - ❌ Not confidential (Base85-encoded)
 - ❌ Not authenticated unless signed (`sign=`) and verified with the key
 
@@ -373,7 +377,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 
 **Trust Model:**
 - ✅ Short handle (key) is unguessable
-- ✅ Checksum verified on retrieve
+- ✅ Checksum verified on retrieve (32-bit, not keyed: detects accidents, not vault writers; sign to cover those)
 - ❌ Vault contents depend on backend security
 - ❌ No built-in encryption at rest
 
@@ -474,6 +478,7 @@ Contributors who report valid security issues will be credited here (with permis
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.3.2 | 2026-09-27 | Integrity wording corrected: the unsigned checksum detects accidental corruption; deliberate tampering is detected only with signing |
 | 0.3.1 | 2026-09-27 | SQLite reads never create a vault file; CLI `verify` reports an unchecked signature instead of a failure |
 | 0.3.0 | 2026-09-27 | `pack()`/`unpack()`; default local vault (owner-only permissions); format frozen in SPEC.md |
 | 0.2.1.1 | 2026-09-27 | `CapsuleResult.signed` separates authenticity from integrity |
@@ -489,19 +494,19 @@ Contributors who report valid security issues will be credited here (with permis
 
 - **Security Fixes:** See `securityReview/FIX_PLAN.md` for detailed finding IDs
 - **Test Coverage:** See `tests/test_security.py` for regression tests
-- **Limitations:** See `README.md` § "Limitations"
+- **Limitations:** See `README.md` § "Limits" and § "Security model"
 - **Threat Model Standards:** Based on OWASP Threat Modeling, Microsoft STRIDE
 
 ---
 
 **Bottom Line:**
 
-PromptCapsule is a **tamper-evident packaging system** for prompts, not a cryptographic security boundary. It protects against **accidental corruption** and **naive tampering**, but **requires application-layer security** (TLS, authentication, vault ACLs) for production use.
+PromptCapsule is a **packaging format** for prompts, not a cryptographic security boundary. The checksum detects **accidental corruption**; capsules are **tamper-evident only when signed and verified with the key**. Production use **requires application-layer security** (TLS, authentication, vault ACLs).
 
-**Use it to detect accidents, not to stop motivated attackers.**
+**Unsigned: detects accidents. Signed and verified with the key: also detects deliberate changes by anyone without the key.**
 
 For questions or clarifications, open a GitHub Discussion or email the maintainer.
 
 ---
 
-*Last updated: 2026-09-24 by Udaya Nirogi*
+*Last updated: 2026-09-27 by Udaya Nirogi*

@@ -48,6 +48,8 @@ A decoder MUST parse a capsule string `s` as follows:
 
 A decoded capsule is **verified** only if the checksum of the decoded text matches. Decoders SHOULD fail closed (raise instead of returning unverified text).
 
+The checksum is not keyed and is only 32 bits, so "verified" means "not accidentally corrupted". It does not resist deliberate tampering: anyone can pack different text into a new capsule, and text that matches a given checksum can be found in about 2^32 attempts, which matters when an attacker can write to the vault. Use signatures (section 8) to detect deliberate changes.
+
 ## 5. Inline capsules
 
 ```
@@ -96,7 +98,7 @@ Future releases MAY add columns or tables but MUST keep reading rows in this lay
 signature = first 32 characters of lowercase hex HMAC-SHA256(key = UTF-8(secret), message = UTF-8(text))
 ```
 
-- The signature (128 bits) covers the text only. It does not cover the type, checksum, payload encoding or vault key; the checksum and vault binding protect those.
+- The signature (128 bits) covers the text only, not the type, checksum, payload encoding or vault key. Any change to those that alters the decoded text therefore fails verification; a change that leaves the text identical (for example a different zlib encoding of it) is not detected and has no effect on what the receiver gets.
 - Secrets MUST be non-empty. Verifiers MUST compare signatures in constant time.
 - A verifier that is given a secret MUST reject unsigned capsules (including capsules whose signature suffix was removed) before decoding the payload or contacting a vault.
 - A signature proves possession of the secret, not freshness: a signed capsule can be replayed.

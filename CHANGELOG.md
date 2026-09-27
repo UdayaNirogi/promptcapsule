@@ -2,6 +2,17 @@
 
 All notable changes to PromptCapsule. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.3.2] - 2026-09-27
+
+Documentation accuracy release. No code behaviour changes; the capsule format is unchanged.
+
+### Documentation
+- Integrity claims corrected everywhere: the unsigned checksum (8 hex characters, 32 bits of SHA-256, not keyed) catches accidental corruption, not deliberate tampering. Deliberate tampering is detected only by an HMAC signature verified with the key. README, TRUST.md, SPEC.md, docs/ABSTRACT.md, llms.txt and docstrings now say so.
+- TRUST.md: no longer claims the full SHA-256 is verified for inline capsules or that a same-prefix payload swap is caught; the prefix-matching attack is rated high risk for unsigned capsules when an attacker can write to the vault. Checksum comparisons are no longer described as constant-time (only signature comparisons are).
+- README: "owner-only permissions" for the default vault is limited to macOS and Linux; typing `export PROMPT_CAPSULE_HMAC_KEY=...` is noted as recorded in shell history.
+- `FormatError` docstring no longer says malformed checksum prefixes raise it (they raise `IntegrityError`).
+- Example 05: removed advice the backend does not support (a non-existent SQLite pragma, connection URLs, WAL) and misleading comparison rows.
+
 ## [0.3.1] - 2026-09-27
 
 Theme: **pass the prompt, not the payload.** Fixes and clearer docs; the capsule format is unchanged.

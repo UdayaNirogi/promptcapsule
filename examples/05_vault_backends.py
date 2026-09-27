@@ -353,15 +353,13 @@ def print_comparison_table():
     ║ Scalability       ║   ⚠️   ║   ⚠️    ║  ⚠️   ║ ✅              ║
     ║ Setup Complexity  ║   ✅   ║   ✅    ║  ⚠️   ║ ⚠️              ║
     ║ Cost              ║   ✅   ║   ✅    ║  ✅   ║ 💰              ║
-    ║ Security         ║   ✅   ║   ⚠️    ║  ⚠️   ║ ✅              ║
     ║ Latency          ║   ✅   ║   ✅    ║  ⚠️   ║ ⚠️              ║
-    ║ Team Sharing     ║   ❌   ║   ❌    ║  ✅   ║ ✅              ║
-    ║ Version History  ║   ❌   ║   ❌    ║  ✅   ║ ✅              ║
+    ║ Team Sharing     ║   ❌   ║   ⚠️    ║  ✅   ║ ✅              ║
     ║ Best For         ║ Testing│ Local   │Cloud  │Production       ║
     ║                  ║        │ Dev     │Team   │Enterprise       ║
     ╚═══════════════════╩════════╩═════════╩═══════╩═════════════════╝
     
-    Legend: ✅ Excellent | ⚠️ Good/Considerations | ❌ Not Available | 💰 Costs
+    Legend: ✅ Yes / easy | ⚠️ Possible, with caveats (SQLite: a shared file) | ❌ No | 💰 Costs
     """
     print(comparison)
     print()
@@ -379,14 +377,14 @@ def print_security_recommendations():
     recommendations = """
     🔒 GENERAL SECURITY PRACTICES
     ══════════════════════════════════════════════════════════════════
-    1. Use PromptCapsule's SHA256 integrity verification
-    2. Keep checksums separate from encrypted data
-    3. Implement access control at the storage level
-    4. Enable encryption at rest and in transit
-    5. Use TLS/HTTPS for all network connections
-    6. Audit all access to sensitive prompts
-    7. Implement rate limiting for API calls
-    8. Monitor for unauthorized access attempts
+    1. Sign capsules and verify with the key: the plain checksum only
+       catches accidental corruption, not someone who can write to the vault
+    2. Implement access control at the storage level
+    3. Enable encryption at rest and in transit (capsules are not encrypted)
+    4. Use TLS/HTTPS for all network connections
+    5. Audit all access to sensitive prompts
+    6. Implement rate limiting for API calls
+    7. Monitor for unauthorized access attempts
     
     📋 INMEMORY BACKEND
     ──────────────────────────────────────────────────────────────────
@@ -397,15 +395,12 @@ def print_security_recommendations():
     
     💾 SQLITE BACKEND
     ──────────────────────────────────────────────────────────────────
-    ✓ Set database file permissions to 600 (owner read/write only)
+    ✓ Set database file permissions to 600 (owner read/write only);
+      the default vault does this on macOS and Linux
     ✓ Keep database file in a secure location
-    ✓ Consider encrypting the database file using:
-      - SQLCipher for encryption at rest
-      - PRAGMA encrypt_key for password protection
+    ✓ The file is not encrypted; use full-disk encryption if prompts are
+      sensitive (SQLiteBackend does not support SQLCipher)
     ✓ Implement backup strategy
-    ✓ Use connection timeout: "sqlite3://db.db?timeout=30"
-    ✓ Enable foreign keys: PRAGMA foreign_keys = ON
-    ✓ Use WAL mode for better concurrency
     ✓ NOT suitable for distributed systems
     ✓ Be aware of SQLite's locking on writes
     

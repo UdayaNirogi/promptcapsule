@@ -47,13 +47,15 @@ _SIG_SUFFIX = re.compile(r"_sig_([0-9a-f]{32})\Z")
 @dataclass
 class PromptCapsule:
     """
-    Compress and decompress LLM prompts using a hybrid approach.
+    Pack prompts into capsules and unpack them: inline for short prompts, a vault
+    reference for long ones.
 
     - Short prompts (≤ INLINE_THRESHOLD bytes): zlib + Base85 inline
     - Long prompts: vault storage, referenced by an unguessable key
 
     Security defaults (v0.1.4+):
-    - decompress(strict=True) raises IntegrityError on checksum failure
+    - decompress(strict=True) raises IntegrityError on checksum failure (the
+      32-bit checksum is not keyed: it catches accidents; sign to catch tampering)
     - empty / malformed checksum prefixes are rejected
     - Base85 payloads must round-trip (rejects trailing junk / malleability)
     - vault bind failures never return retrieved plaintext
@@ -405,7 +407,7 @@ class PromptCapsule:
     def _add_signature(capsule: str, text: str, key: str) -> str:
         """Add HMAC-SHA256 signature to capsule.
 
-        Format: cap_X_..._sig_<hmac64>
+        Format: cap_X_..._sig_<hmac128>
         Uses first 32 hex chars (16 bytes) of HMAC for compactness.
         """
         signature = IntegrityChecker.create_signature(text, key)

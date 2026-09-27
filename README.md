@@ -4,14 +4,14 @@
 
 Lossless prompt capsules with fail-closed integrity for agent-to-agent handoff.
 
-**As simple as a string.** `pack(text)` turns a prompt into a capsule string you can store, log, or hand to another agent. `unpack(capsule)` gives back the exact original, or raises. Never silently corrupted text.
+**As simple as a string.** `pack(text)` turns a prompt into a capsule string you can store, log, or hand to another agent. `unpack(capsule)` gives back the exact original, or raises if the capsule was damaged on the way. The built-in checksum catches accidental corruption; signing (below) also catches deliberate changes.
 
 ```bash
 pip install promptcapsule            # core: zero dependencies
 pip install "promptcapsule[vault]"   # adds S3 and GitHub Gist backends
 ```
 
-Python 3.8–3.13 · MIT · 180+ tests on Linux, macOS and Windows · [Frozen format spec](https://github.com/UdayaNirogi/promptcapsule/blob/main/SPEC.md) · [Changelog](https://github.com/UdayaNirogi/promptcapsule/blob/main/CHANGELOG.md)
+Python 3.8–3.13 · MIT · 200+ tests on Linux, macOS and Windows · [Frozen format spec](https://github.com/UdayaNirogi/promptcapsule/blob/main/SPEC.md) · [Changelog](https://github.com/UdayaNirogi/promptcapsule/blob/main/CHANGELOG.md)
 
 ## Quick start
 
@@ -24,7 +24,7 @@ capsule = pack("You are a helpful Python coding assistant.")
 prompt = unpack(capsule)   # the exact original, or an exception
 ```
 
-Nothing to configure. Prompts over 500 bytes are stored in a local SQLite vault, `~/.promptcapsule/vault.db`, created on first use with owner-only permissions:
+Nothing to configure. Prompts over 500 bytes are stored in a local SQLite vault, `~/.promptcapsule/vault.db`, created on first use (owner-only permissions on macOS and Linux):
 
 ```python
 long_prompt = "You are a senior software architect reviewing a pull request. " * 40
@@ -32,7 +32,7 @@ capsule = pack(long_prompt)   # 'cap_v_66152d9b_sql_JME_tuuntLjuEVRztHpH4A' (key
 unpack(capsule)               # works wherever that vault is available
 ```
 
-A vault capsule is a verified reference to the stored text: the agent that unpacks it needs the same vault. To share one, point both sides at it with `PROMPT_CAPSULE_VAULT=/shared/team.db`, or pass `vault=` (a path or any backend below) to `pack` and `unpack`.
+A vault capsule is a checksummed reference to the stored text: the agent that unpacks it needs the same vault. To share one, point both sides at it with `PROMPT_CAPSULE_VAULT=/shared/team.db`, or pass `vault=` (a path or any backend below) to `pack` and `unpack`.
 
 ## What's in a capsule
 
@@ -47,7 +47,7 @@ Capsules are a packaging format, not a way to make prompts smaller: an inline ca
 
 ## Signed capsules (authenticity)
 
-The 8-hex checksum detects corruption, but anyone can compute it. To check that a capsule was made by someone holding a shared secret key, sign it with HMAC-SHA256:
+The 8-hex (32-bit) checksum catches accidental corruption, but anyone can compute it, so it doesn't stop deliberate tampering. To detect deliberate changes, and to check that a capsule was made by someone holding a shared secret key, sign it with HMAC-SHA256:
 
 ```python
 from promptcapsule import SignatureError
@@ -69,8 +69,8 @@ For metadata, use the class API: `PromptCapsule().decompress(capsule, ...)` retu
 
 ## When to use it
 
-- **Handing an exact prompt between agents, processes or services** through a channel that should carry a short string: a queue message, a tool argument, a log line, a database column.
-- **You need to know the text arrived unchanged**, and optionally that it came from a holder of a shared key.
+- **Handing an exact prompt between agents, processes or services** through a channel that carries a single string: a queue message, a tool argument, a log line, a database column.
+- **You need to catch prompts corrupted or truncated on the way**, and, with signing, prompts deliberately changed by someone without the shared key.
 - **Referring to long prompts** from tickets, configs or commits without pasting them in.
 
 ## When not to use it
@@ -95,7 +95,7 @@ promptcapsule pack --file prompt.txt --sign
 promptcapsule unpack --file capsule.txt --require-signature
 ```
 
-Keys are never accepted as command-line arguments, so they stay out of shell history and process listings.
+Keys are never accepted as command-line arguments, so they don't appear in process listings. Typing `export PROMPT_CAPSULE_HMAC_KEY=...` in an interactive shell records the key in shell history; prefer `--key-file` or a secrets manager.
 
 ## Backends
 
@@ -103,10 +103,10 @@ Keys are never accepted as command-line arguments, so they stay out of shell his
 |---------|--------|-------|
 | In-memory | `InMemoryBackend()` | Tests and prototypes |
 | SQLite | `SQLiteBackend("prompts.db")` | Local file, no dependencies; the default vault |
-| GitHub Gist | `GitHubGistBackend(token=...)` | Private gists; retrieval requires the gist to belong to the token's user |
+| GitHub Gist | `GitHubGistBackend(token=...)` | Private gists; by default, retrieval requires the gist to belong to the token's user |
 | AWS S3 | `S3Backend(bucket=..., region=...)` | Keys confined to the configured prefix |
 
-All live in `promptcapsule.backends`. Both agents must reach the same backend. Vault keys are random (`secrets.token_urlsafe`), and the capsule checksum is bound to the stored content, so swapping keys between capsules fails verification.
+All live in `promptcapsule.backends`. Both agents must reach the same backend. Vault keys are random (`secrets.token_urlsafe`), and the capsule checksum is bound to the stored content, so swapping keys between capsules fails verification. The binding is 32 bits and isn't keyed, so it doesn't stop someone who can write to the vault; use signing for that.
 
 Custom backend: subclass `promptcapsule.core.VaultBackend` and implement `store(text, checksum) -> key`, `retrieve(key)`, and `retrieve_with_checksum(key) -> (text, checksum)`.
 
@@ -136,10 +136,11 @@ All exceptions derive from `PromptCapsuleError`:
 
 ## Security model
 
-**Provides:** exact reconstruction; tamper and corruption detection; optional authenticity with a shared secret key; zip-bomb protection (decoding is size-capped).
+**Provides:** exact reconstruction; detection of accidental corruption (unsigned capsules carry a 32-bit SHA-256 prefix); detection of deliberate tampering and authenticity only with HMAC signing verified with the key; zip-bomb protection (decoding is size-capped).
 
 **Does not provide:**
 
+- **Tamper resistance for unsigned capsules.** Anyone can recompute the checksum. Sign capsules and verify with the key.
 - **Encryption.** Anyone holding an inline capsule, or with access to the vault, can read the prompt.
 - **Identity or access control.** Protect your vault with its own ACLs (IAM, private gists, file permissions).
 - **Replay protection.** Add your own nonce or expiry if you need it.
