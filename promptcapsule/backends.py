@@ -77,13 +77,13 @@ class SQLiteBackend(VaultBackend):
     def close(self):
         """No-op: a connection is opened and closed for every operation."""
 
-    def _select(self, columns: str, key: str) -> tuple:
+    def _select(self, key: str) -> tuple:
         if not os.path.isfile(self.db_path):
             raise KeyError(f"Key not found: {key} (vault database {self.db_path} does not exist)")
         conn = sqlite3.connect(self.db_path)
         try:
             try:
-                cursor = conn.execute(f"SELECT {columns} FROM capsules WHERE key = ?", (key,))
+                cursor = conn.execute("SELECT text, checksum FROM capsules WHERE key = ?", (key,))
             except sqlite3.OperationalError as e:
                 if "no such table" in str(e):
                     raise KeyError(f"Key not found: {key}") from e
@@ -116,10 +116,10 @@ class SQLiteBackend(VaultBackend):
         raise RuntimeError("Failed to generate unique vault key")
 
     def retrieve(self, key: str) -> str:
-        return self._select("text", key)[0]
+        return self._select(key)[0]
 
     def retrieve_with_checksum(self, key: str) -> tuple:
-        text, checksum = self._select("text, checksum", key)
+        text, checksum = self._select(key)
         return text, checksum
 
 
