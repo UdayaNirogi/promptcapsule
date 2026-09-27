@@ -285,6 +285,35 @@ class TestCLISigning:
         plain = run_cli("pack", "--text", "hello").stdout.strip()
         assert "Signed: no" in run_cli("inspect", "--capsule", plain).stdout
 
+    def test_verify_without_key_says_authenticity_not_checked(self):
+        capsule = run_cli("pack", "--text", "hello", "--sign", hmac_key="k").stdout.strip()
+        stripped = capsule.rsplit("_sig_", 1)[0]
+        result = run_cli("verify", "--capsule", stripped)
+        assert result.returncode == 0
+        assert "Integrity verification PASSED" in result.stdout
+        assert "Not signed" in result.stdout
+        assert "Signature verification PASSED" not in result.stdout
+
+    def test_signed_capsule_without_key_error_mentions_verification(self):
+        capsule = run_cli("pack", "--text", "hello", "--sign", hmac_key="k").stdout.strip()
+        result = run_cli("unpack", "--capsule", capsule)
+        assert result.returncode == 1
+        assert "verify" in result.stderr
+        assert "Signing requested" not in result.stderr
+
+
+class TestCLIMissingVault:
+    @pytest.mark.parametrize("command", ["unpack", "verify"])
+    def test_missing_vault_is_not_created(self, tmp_path, command):
+        vault_db = tmp_path / "prompts.db"
+        capsule = run_cli("pack", "--text", "x" * 600, "--vault", str(vault_db)).stdout.strip()
+        missing = tmp_path / "does-not-exist.db"
+
+        result = run_cli(command, "--capsule", capsule, "--vault", str(missing))
+        assert result.returncode == 1
+        assert "Vault database not found" in result.stderr
+        assert not missing.exists()
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -2,6 +2,16 @@
 
 All notable changes to PromptCapsule. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `CapsuleResult.signed`: `True` only when an HMAC signature was present and verified with a key. `verified` still covers the checksum only, so a signature-stripped capsule opened without a key now visibly reports `signed=False`.
+- `promptcapsule verify` prints `Not signed: authenticity was not checked` for capsules that were not signature-verified; `unpack --verbose` shows `Signed: yes/no`.
+
+### Fixed
+- `unpack` and `verify` no longer create an empty SQLite file when the `--vault` path does not exist; they fail with `Vault database not found`.
+- Opening a signed capsule without a key now says the key is needed to verify it, instead of "Signing requested".
+
 ## [0.2.1] - 2026-09-26
 
 Security fix. Everyone on 0.2.0 should upgrade.

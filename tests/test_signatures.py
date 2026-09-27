@@ -340,5 +340,52 @@ class TestSignatureRequired:
             PromptCapsule().compress("hi", sign=True)
 
 
+class TestSignedResultField:
+    """result.signed reports authenticity separately from result.verified (integrity)."""
+
+    def test_signed_true_when_signature_verified(self):
+        pc = PromptCapsule()
+        result = pc.decompress(pc.compress("hi", sign="k"), verify_signature="k")
+        assert result.verified is True
+        assert result.signed is True
+
+    def test_signed_true_for_vault_capsule(self):
+        pc = PromptCapsule()
+        backend = InMemoryBackend()
+        capsule = pc.compress("x" * 1000, vault_backend=backend, sign="k")
+        assert pc.decompress(capsule, vault_backend=backend, verify_signature="k").signed is True
+
+    def test_stripped_capsule_without_key_is_verified_but_not_signed(self, monkeypatch):
+        monkeypatch.delenv("PROMPT_CAPSULE_HMAC_KEY", raising=False)
+        pc = PromptCapsule()
+        stripped = pc.compress("hi", sign="k").rsplit("_sig_", 1)[0]
+        result = pc.decompress(stripped)
+        assert result.verified is True
+        assert result.signed is False
+
+    def test_signed_false_when_verification_skipped(self):
+        pc = PromptCapsule()
+        result = pc.decompress(pc.compress("hi", sign="k"), verify_signature=False)
+        assert result.signed is False
+
+
+class TestKeyErrorMessages:
+    def test_signed_capsule_without_key_mentions_verification(self, monkeypatch):
+        monkeypatch.delenv("PROMPT_CAPSULE_HMAC_KEY", raising=False)
+        pc = PromptCapsule()
+        signed = pc.compress("hi", sign="k")
+        with pytest.raises(SignatureError) as exc:
+            pc.decompress(signed)
+        message = str(exc.value)
+        assert "verify" in message
+        assert "Signing requested" not in message
+        assert "PROMPT_CAPSULE_HMAC_KEY" in message
+
+    def test_sign_without_key_mentions_signing(self, monkeypatch):
+        monkeypatch.delenv("PROMPT_CAPSULE_HMAC_KEY", raising=False)
+        with pytest.raises(SignatureError, match="Signing requested"):
+            PromptCapsule().compress("hi", sign=True)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

@@ -23,7 +23,12 @@ from .integrity import IntegrityChecker
 
 
 class CapsuleResult(NamedTuple):
-    """Result from compress/decompress operations."""
+    """Result from compress/decompress operations.
+
+    ``verified`` covers the checksum only (integrity). ``signed`` is True only when an
+    HMAC signature was present and verified with a key (authenticity); an unsigned or
+    signature-stripped capsule opened without a key has ``verified=True, signed=False``.
+    """
 
     text: str
     verified: bool
@@ -31,6 +36,7 @@ class CapsuleResult(NamedTuple):
     checksum: str
     original_size: int
     capsule_size: int
+    signed: bool = False
 
 
 _HEX8 = re.compile(r"^[0-9a-f]{8}$")
@@ -174,7 +180,7 @@ class PromptCapsule:
             capsule, expected_sig = self._extract_signature(capsule)
             if verify_signature is not False:
                 sig_key = self._get_signature_key(
-                    True if verify_signature is None else verify_signature
+                    True if verify_signature is None else verify_signature, verifying=True
                 )
 
         capsule_data = capsule[4:]
@@ -193,6 +199,7 @@ class PromptCapsule:
             # Never include the computed signature in the error: it would leak a valid MAC.
             if not hmac.compare_digest(computed_sig_short, expected_sig):
                 raise SignatureError("Signature verification failed")
+            result = result._replace(signed=True)
 
         if strict and not result.verified:
             raise IntegrityError(
@@ -373,11 +380,12 @@ class PromptCapsule:
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
     @staticmethod
-    def _get_signature_key(sign: bool | str | None) -> str | None:
+    def _get_signature_key(sign: bool | str | None, *, verifying: bool = False) -> str | None:
         """Get HMAC signature key from parameter or environment.
 
         Args:
             sign: bool (use env), str (explicit key), or None (no signing)
+            verifying: True when the key is needed to verify rather than create a signature
 
         Returns:
             Key string if available, None otherwise
@@ -395,6 +403,11 @@ class PromptCapsule:
 
         key = os.environ.get("PROMPT_CAPSULE_HMAC_KEY")
         if not key:
+            if verifying:
+                raise SignatureError(
+                    "Capsule is signed but no key was provided to verify it: pass the key "
+                    "or set the PROMPT_CAPSULE_HMAC_KEY environment variable"
+                )
             raise SignatureError(
                 "Signing requested but PROMPT_CAPSULE_HMAC_KEY environment variable not set"
             )

@@ -60,6 +60,7 @@ except SignatureError:
 ```
 
 - **Receivers must pass the key.** When `verify_signature` is a key (or `True`), unsigned capsules — including ones with the `_sig_…` suffix stripped — are rejected before anything is decompressed or fetched from a vault. With the default `verify_signature=None`, unsigned capsules are accepted.
+- `result.verified` covers the checksum (integrity) only. `result.signed` is `True` only when a signature was checked against the key, so a stripped capsule opened without a key reports `verified=True, signed=False`.
 - `sign=True` / `verify_signature=True` read the key from `PROMPT_CAPSULE_HMAC_KEY`. Empty keys are rejected.
 - The signature is a 128-bit truncated HMAC-SHA256 over the prompt text, compared in constant time.
 - Signing proves who created the prompt, not when: a valid capsule can be replayed.

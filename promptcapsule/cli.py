@@ -25,6 +25,15 @@ def _write_text(path, text):
         Path(path).write_bytes(text.encode("utf-8"))
 
 
+def _existing_vault(path):
+    """Open a vault for reading; never create a database file as a side effect."""
+    if not path:
+        return None
+    if not Path(path).is_file():
+        raise FileNotFoundError(f"Vault database not found: {path}")
+    return SQLiteBackend(path)
+
+
 def _read_capsule(args):
     if args.file:
         return _read_text(args.file).strip()
@@ -88,9 +97,8 @@ def unpack_command(args):
         print("Error: Either --file or --capsule required", file=sys.stderr)
         return 1
 
-    vault_backend = SQLiteBackend(args.vault) if args.vault else None
-
     try:
+        vault_backend = _existing_vault(args.vault)
         verify = _signing_key(args, args.require_signature)
         result = pc.decompress(
             capsule,
@@ -106,6 +114,7 @@ def unpack_command(args):
         if args.verbose:
             print(f"\nMode: {result.mode}", file=sys.stderr)
             print(f"Verified: {result.verified}", file=sys.stderr)
+            print(f"Signed: {'yes' if result.signed else 'no'}", file=sys.stderr)
             print(f"Original size: {result.original_size} bytes", file=sys.stderr)
 
         if not result.verified:
@@ -181,9 +190,8 @@ def verify_command(args):
         print("Error: Either --file or --capsule required", file=sys.stderr)
         return 1
 
-    vault_backend = SQLiteBackend(args.vault) if args.vault else None
-
     try:
+        vault_backend = _existing_vault(args.vault)
         verify = _signing_key(args, args.require_signature)
         result = pc.decompress(
             capsule, vault_backend=vault_backend, strict=True, verify_signature=verify
@@ -191,8 +199,10 @@ def verify_command(args):
 
         if result.verified:
             print("[PASS] Integrity verification PASSED")
-            if verify:
+            if result.signed:
                 print("[PASS] Signature verification PASSED")
+            else:
+                print("[INFO] Not signed: authenticity was not checked")
             if args.verbose:
                 print(f"Mode: {result.mode}")
                 print(f"Checksum: {result.checksum[:16]}...")
