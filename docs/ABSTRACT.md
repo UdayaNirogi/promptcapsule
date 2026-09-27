@@ -2,7 +2,7 @@
 
 **Pass the prompt, not the payload.**
 
-**Version:** 0.3.0 · **PyPI:** `pip install promptcapsule` · **License:** MIT
+**Version:** 0.3.1 · **PyPI:** `pip install promptcapsule` · **License:** MIT
 
 PromptCapsule is an open-source Python library for **lossless prompt capsules**: it turns prompt text into a short, portable string that one agent, process or service can hand to another, and turns it back into the exact original text on the other side, or raises an error. It never returns silently corrupted text.
 

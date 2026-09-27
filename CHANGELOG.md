@@ -2,7 +2,9 @@
 
 All notable changes to PromptCapsule. Versions follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.1] - 2026-09-27
+
+Theme: **pass the prompt, not the payload.** Fixes and clearer docs; the capsule format is unchanged.
 
 ### Fixed
 - `SQLiteBackend` no longer creates an empty database file when you read from a path that does not exist; it raises `KeyError` instead. The file is created on the first `store`.
