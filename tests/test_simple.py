@@ -96,6 +96,70 @@ def test_vault_capsules_survive_process_restart(tmp_path):
     assert unpack(capsule, vault=db) == LONG
 
 
+def test_handoff_between_separate_processes(isolated_default_vault):
+    """Two agents in different processes share only the capsule string."""
+    import subprocess
+
+    def run(code, stdin):
+        return subprocess.run(
+            [sys.executable, "-c", code],
+            input=stdin.encode("utf-8"),
+            capture_output=True,
+            check=True,
+        ).stdout.decode("utf-8")
+
+    sender = "import sys, promptcapsule; print(promptcapsule.pack(sys.stdin.read()))"
+    receiver = (
+        "import sys, promptcapsule; "
+        "sys.stdout.buffer.write(promptcapsule.unpack(sys.stdin.read().strip()).encode())"
+    )
+    for text in (SHORT, LONG):
+        capsule = run(sender, text).strip()
+        assert run(receiver, capsule) == text
+    assert isolated_default_vault.is_file()
+
+
+def test_concurrent_packs_share_default_vault():
+    from concurrent.futures import ThreadPoolExecutor
+
+    texts = [f"{i}: " + LONG for i in range(40)]
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        capsules = list(pool.map(pack, texts))
+    assert len(set(capsules)) == len(texts)
+    assert [unpack(c) for c in capsules] == texts
+
+
+def test_env_key_signing(monkeypatch):
+    monkeypatch.setenv("PROMPT_CAPSULE_HMAC_KEY", "env-secret")
+    capsule = pack(LONG, sign=True)
+    assert unpack(capsule, verify_signature=True) == LONG
+    monkeypatch.setenv("PROMPT_CAPSULE_HMAC_KEY", "other")
+    with pytest.raises(SignatureError):
+        unpack(capsule, verify_signature=True)
+
+
+def test_vault_path_forms(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    capsule = pack(LONG, vault="~/tilde.db")
+    assert (tmp_path / "tilde.db").is_file()
+    assert unpack(capsule, vault=tmp_path / "tilde.db") == LONG
+
+
+def test_env_var_overrides_default_location(tmp_path, monkeypatch):
+    custom = tmp_path / "custom" / "shared.db"
+    monkeypatch.setenv("PROMPT_CAPSULE_VAULT", str(custom))
+    assert unpack(pack(LONG)) == LONG
+    assert custom.is_file()
+
+
+def test_pack_output_opens_with_class_api():
+    from promptcapsule import PromptCapsule
+
+    result = PromptCapsule().decompress(pack(SHORT, sign="k"), verify_signature="k")
+    assert (result.text, result.verified, result.signed) == (SHORT, True, True)
+
+
 def test_signed_roundtrip_and_stripping_rejected():
     capsule = pack(SHORT, sign="k")
     assert unpack(capsule, verify_signature="k") == SHORT

@@ -2,7 +2,7 @@
 
 All notable changes to PromptCapsule. Versions follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.0] - 2026-09-27
 
 Theme: **as simple as a string.**
 

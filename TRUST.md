@@ -1,6 +1,6 @@
 # PromptCapsule — Trust & Threat Model
 
-**Version:** 0.2.1.1  
+**Version:** 0.3.0  
 **Last Updated:** 2026-09-24  
 **Status:** Living document
 
@@ -474,6 +474,7 @@ Contributors who report valid security issues will be credited here (with permis
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.3.0 | 2026-09-27 | `pack()`/`unpack()`; default local vault (owner-only permissions); format frozen in SPEC.md |
 | 0.2.1.1 | 2026-09-27 | `CapsuleResult.signed` separates authenticity from integrity |
 | 0.2.1 | 2026-09-26 | Signature required when a key is supplied; empty keys rejected |
 | 0.2.0 | 2026-09-26 | Optional HMAC-SHA256 signed capsules |
