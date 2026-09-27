@@ -1,4 +1,4 @@
-"""Example 2: Working with long prompts using vault backends (v0.1.5)."""
+"""Example 2: Working with long prompts using vault backends."""
 
 from promptcapsule import PromptCapsule, IntegrityError
 from promptcapsule.backends import InMemoryBackend, SQLiteBackend
@@ -84,7 +84,7 @@ try:
     assert result_memory.text == long_prompt
     print(f"✓ Decompressed successfully from memory backend")
     print(f"  Verified: {result_memory.verified}")
-    print(f"  Compression ratio: {len(capsule_memory) / result_memory.original_size:.2%}")
+    print(f"  Mode: {result_memory.mode}")
 except IntegrityError as e:
     print(f"❌ Integrity verification failed: {e}")
     raise

@@ -1,5 +1,7 @@
 # Technical Design Document — PromptCapsule
 
+> Historical design notes written for a 0.1.5 technical review. The current, authoritative format is [SPEC.md](../../SPEC.md).
+
 **Version:** 0.1.5  
 **Audience:** C-batch / technical review  
 **Repository:** https://github.com/UdayaNirogi/promptcapsule  

@@ -60,7 +60,6 @@ def example_inmemory_backend():
     print(f"✅ Compressed prompt: {compressed[:50]}...")
     print(f"   Original size: {len(long_prompt)} bytes")
     print(f"   Capsule size: {len(compressed)} bytes")
-    print(f"   Compression ratio: {len(compressed)/len(long_prompt)*100:.1f}%")
     
     # Decompress and retrieve
     result = capsule.decompress(compressed, vault_backend=backend)

@@ -6,7 +6,6 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent
-ASSETS = ROOT.parent.parent / "assets"
 
 NAVY = (11, 31, 58)
 TEAL = (13, 148, 136)
@@ -40,9 +39,6 @@ def text_center(draw, cx, cy, text, fnt, fill):
 def save(img: Image.Image, name: str):
     out = ROOT / name
     img.save(out, "PNG", optimize=True)
-    ASSETS.mkdir(exist_ok=True)
-    if name == "promptcapsule_infographic.png":
-        img.save(ASSETS / name, "PNG", optimize=True)
     print(f"Wrote {out} ({out.stat().st_size // 1024} KB)")
 
 

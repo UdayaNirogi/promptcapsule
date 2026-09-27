@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "promptcapsule"
 version = "0.3.0"
-description = "Lossless prompt capsules with fail-closed integrity for agent handoffs"
+description = "Pass the prompt, not the payload. Lossless prompt capsules with fail-closed integrity for agent-to-agent handoff."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.8"
 authors = [
     {name = "Udaya Nirogi", email = "data.pycap@gmail.com"}
 ]
-keywords = ["prompt", "compression", "retrieval", "ai", "llm", "agents", "agent-to-agent", "integrity", "cli"]
+keywords = ["prompt", "llm", "ai-agents", "agent-to-agent", "multi-agent", "handoff", "capsule", "integrity", "hmac", "cli"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -41,8 +41,13 @@ vault = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/UdayaNirogi/promptcapsule"
-"Bug Tracker" = "https://github.com/UdayaNirogi/promptcapsule/issues"
+Homepage = "https://github.com/UdayaNirogi/promptcapsule"
+Documentation = "https://github.com/UdayaNirogi/promptcapsule#readme"
+Source = "https://github.com/UdayaNirogi/promptcapsule"
+Changelog = "https://github.com/UdayaNirogi/promptcapsule/blob/main/CHANGELOG.md"
+Specification = "https://github.com/UdayaNirogi/promptcapsule/blob/main/SPEC.md"
+Issues = "https://github.com/UdayaNirogi/promptcapsule/issues"
+Discussions = "https://github.com/UdayaNirogi/promptcapsule/discussions"
 
 [project.scripts]
 promptcapsule = "promptcapsule.cli:main"

@@ -1,4 +1,4 @@
-"""Core compression and decompression logic for PromptCapsule."""
+"""Capsule encoding and decoding for PromptCapsule (format v1, see SPEC.md)."""
 
 from __future__ import annotations
 

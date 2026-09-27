@@ -1,30 +1,35 @@
 # Abstract — PromptCapsule
 
-**Version:** 0.1.5 · **PyPI:** `pip install promptcapsule`
+**Pass the prompt, not the payload.**
 
-**PromptCapsule** is an open-source Python library for **lossless prompt packaging**: it converts LLM prompt text into a portable *capsule* string that can be shared, versioned, and reconstructed with integrity checks.
+**Version:** 0.3.0 · **PyPI:** `pip install promptcapsule` · **License:** MIT
 
-Unlike semantic “prompt compression” tools (e.g., LLMLingua) that shorten meaning for token savings—and may alter wording—PromptCapsule **never changes the prompt content**. It uses a **hybrid strategy**:
+PromptCapsule is an open-source Python library for **lossless prompt capsules**: it turns prompt text into a short, portable string that one agent, process or service can hand to another, and turns it back into the exact original text on the other side, or raises an error. It never returns silently corrupted text.
 
-| Mode | Trigger | Mechanism | Typical portable size | Integrity |
-|------|---------|-----------|----------------------|-----------|
-| **Inline** | Prompt ≤ **500 bytes** | zlib (level 9) + Base85 | Often ~90–140% of original* | SHA-256 prefix in capsule |
-| **Vault** | Prompt **> 500 bytes** | Store full text in a backend; emit short key | Short ID; **~99% smaller** than multi‑KB prompts | SHA-256 verified on retrieve |
+The API is as simple as a string:
 
-\*Short, non-repetitive text can expand slightly due to encoding overhead.
+```python
+from promptcapsule import pack, unpack
 
-**Hard limits:** max prompt / capsule / zlib expansion = **10 MiB**. Default `decompress(strict=True)` raises on failure.
+capsule = pack(prompt)   # a plain str: store it, log it, send it
+prompt = unpack(capsule) # the exact original, or an exception
+```
 
-**Quality:** **81 automated tests** (core + security).
+| Mode | Used for | What the capsule holds | Integrity |
+|------|----------|------------------------|-----------|
+| **Inline** | Prompts up to 500 bytes | The whole prompt (zlib + Base85), self-contained | SHA-256 prefix checked on every unpack |
+| **Vault** | Longer prompts | A random key; the text is stored in a vault both sides can reach | SHA-256 bound to the stored text |
 
-### Limitations (important)
+Long prompts go to a local SQLite vault (`~/.promptcapsule/vault.db`) with no configuration; teams can point both sides at a shared vault, S3 or GitHub Gist instead. PromptCapsule never shortens or rewrites the prompt: the model always reads the full, unchanged text.
 
-- Not encryption, not authentication, not a full MAC (8-hex SHA-256 prefix only).
-- Long-prompt handoffs need a **shared vault** with proper ACLs.
-- A demo HTTP “bus” is **not** part of this package.
+**Optional signing:** HMAC-SHA256 with a shared secret key. A receiver that passes the key rejects unsigned, stripped or tampered capsules. A valid signature proves only that the signer holds the key.
 
-### Agent-to-agent potential
+**Stability:** the capsule format is frozen in [SPEC.md](../SPEC.md). Every capsule produced since 0.1.0 decodes in every future release, enforced by fixed test vectors in CI (Python 3.8–3.13 on Linux, macOS and Windows).
 
-Agents can pass a capsule instead of the full prompt; the receiver uses `decompress` and only continues if verification succeeds.
+### Limitations
+
+- Not encryption: anyone with an inline capsule or vault access can read the prompt.
+- Not identity, access control or replay protection.
+- Long-prompt capsules only unpack where the same vault is available.
 
 **Availability:** GitHub [UdayaNirogi/promptcapsule](https://github.com/UdayaNirogi/promptcapsule) · PyPI [promptcapsule](https://pypi.org/project/promptcapsule/)

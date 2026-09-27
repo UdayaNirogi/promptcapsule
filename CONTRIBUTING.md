@@ -30,7 +30,7 @@ Thank you for your interest in contributing to PromptCapsule! We welcome contrib
 
 4. **Verify setup**
    ```bash
-   python run_tests.py
+   pytest
    ```
 
 ## Development Workflow
@@ -39,29 +39,30 @@ Thank you for your interest in contributing to PromptCapsule! We welcome contrib
 
 ```bash
 # Run all tests
-python run_tests.py
+pytest
 
-# Run specific test module (requires pytest)
-pytest tests/test_core.py -v
+# Run one module
+pytest tests/test_simple.py -v
 
 # Run with coverage
 pytest tests/ --cov=promptcapsule --cov-report=html
 ```
 
+Tests never touch your real `~/.promptcapsule` vault: `tests/conftest.py` points `PROMPT_CAPSULE_VAULT` at a temporary file.
+
 ### Code Style
 
-We follow PEP 8. Before submitting, run:
+CI runs these checks; run all of them together before committing:
 
 ```bash
-# Format code
-black promptcapsule/ tests/
-
-# Check for style issues
-flake8 promptcapsule/ tests/
-
-# Type checking
-mypy promptcapsule/
+pip install ruff "black==25.11.0" isort
+isort promptcapsule/ tests/ && black promptcapsule/ tests/ && ruff check --fix promptcapsule/ tests/
+ruff check promptcapsule/ tests/ && black --check promptcapsule/ tests/ && isort --check-only promptcapsule/ tests/
 ```
+
+### The capsule format is frozen
+
+[SPEC.md](SPEC.md) is a compatibility promise: every capsule ever produced must keep decoding. If a change makes `tests/test_format_v1.py` fail, fix the change, never the test vectors. A genuinely new format needs a new type letter and a spec update.
 
 ### Writing Tests
 
@@ -74,15 +75,13 @@ mypy promptcapsule/
 Example:
 
 ```python
-def test_unicode_prompt_compression():
-    """Test that unicode characters are preserved through compression."""
-    pc = PromptCapsule()
+from promptcapsule import pack, unpack
+
+
+def test_unicode_prompt_roundtrip():
+    """Unicode text comes back byte-for-byte identical."""
     prompt = "Hello 世界 🌍"
-    capsule = pc.compress(prompt)
-    result = pc.decompress(capsule)
-    
-    assert result.text == prompt
-    assert result.verified is True
+    assert unpack(pack(prompt)) == prompt
 ```
 
 ## Submitting Changes
@@ -109,7 +108,7 @@ Please include:
 2. **Create a feature branch**: `git checkout -b feature/my-feature`
 3. **Write tests first** (TDD preferred)
 4. **Implement the feature**
-5. **Run all tests**: `python run_tests.py`
+5. **Run all tests and checks**: `pytest` plus the lint commands above
 6. **Update README** if needed
 7. **Commit with clear messages**: `git commit -m "Add: feature description"`
 8. **Push and open a Pull Request**
@@ -128,27 +127,30 @@ Please include:
 ```
 promptcapsule/
 ├── __init__.py          # Public API
-├── core.py              # Main PromptCapsule class
-├── backends.py          # Storage backends
-├── integrity.py         # Checksum verification
-└── cli.py               # (future) Command-line tool
+├── simple.py            # pack() / unpack() and the default vault
+├── core.py              # PromptCapsule class, capsule encoding and decoding
+├── backends.py          # Vault backends (in-memory, SQLite, Gist, S3)
+├── integrity.py         # Checksums and HMAC signatures
+├── exceptions.py        # Error types
+└── cli.py               # Command-line tool
 
 tests/
-├── __init__.py
-├── conftest.py          # Pytest fixtures
-├── test_core.py         # Core functionality
-├── test_backends.py     # Backend tests
-├── test_integrity.py    # Integrity checker tests
+├── conftest.py          # Fixtures (isolated default vault)
+├── test_simple.py       # pack() / unpack()
+├── test_format_v1.py    # Frozen format test vectors (SPEC.md)
+├── test_core.py         # PromptCapsule class
+├── test_signatures.py   # HMAC signing
+├── test_security.py     # Security regressions
+├── test_backends.py     # Vault backends
+├── test_cli.py          # Command-line tool
 └── test_integration.py  # End-to-end scenarios
 ```
 
 ## Areas We Need Help With
 
-- [ ] **CLI tool** (`promptcapsule compress`, `promptcapsule decompress`)
 - [ ] **Web UI** for managing vaults
 - [ ] **Async support** for backends
 - [ ] **More backends**: DynamoDB, PostgreSQL, etc.
-- [ ] **Performance benchmarks**
 - [ ] **API documentation** in Markdown
 - [ ] **Blog posts** about use cases
 - [ ] **Example projects** using PromptCapsule

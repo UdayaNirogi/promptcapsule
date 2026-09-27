@@ -60,15 +60,16 @@ print()
 pc = PromptCapsule()
 backend = JSONBackend("my_vault.json")
 
-# Compress some prompts
+# Pack some prompts
+# Long prompts (over 500 bytes) are stored in the vault; short ones stay inline
 prompts = [
-    "Write a Python function that sorts a list",
-    "Explain quantum computing in simple terms",
-    "Generate creative product names for a new todo app",
+    "Write a Python function that sorts a list. " * 15,
+    "Explain quantum computing in simple terms. " * 15,
+    "Generate creative product names for a new todo app. " * 15,
 ]
 
 capsules = []
-print("Compressing prompts...")
+print("Packing prompts...")
 for i, prompt in enumerate(prompts, 1):
     capsule = pc.compress(prompt, vault_backend=backend)
     capsules.append(capsule)
@@ -89,8 +90,8 @@ with open("my_vault.json", "r") as f:
 
 print()
 
-# Decompress a prompt
-print("Decompressing first prompt...")
+# Unpack a prompt
+print("Unpacking first prompt...")
 result = pc.decompress(capsules[0], vault_backend=backend)
 print(f"  Original: {result.text}")
 print(f"  Verified: {result.verified}")

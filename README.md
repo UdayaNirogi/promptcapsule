@@ -1,5 +1,9 @@
 # PromptCapsule
 
+> **Pass the prompt, not the payload.**
+
+Lossless prompt capsules with fail-closed integrity for agent-to-agent handoff.
+
 **As simple as a string.** `pack(text)` turns a prompt into a capsule string you can store, log, or hand to another agent. `unpack(capsule)` gives back the exact original, or raises. Never silently corrupted text.
 
 ```bash
@@ -24,11 +28,11 @@ Nothing to configure. Prompts over 500 bytes are stored in a local SQLite vault,
 
 ```python
 long_prompt = "You are a senior software architect reviewing a pull request. " * 40
-capsule = pack(long_prompt)   # 'cap_v_66152d9b_sql_JME_tuuntLjuEVRztHpH4A' (41 chars; key part is random)
+capsule = pack(long_prompt)   # 'cap_v_66152d9b_sql_JME_tuuntLjuEVRztHpH4A' (key part is random)
 unpack(capsule)               # works wherever that vault is available
 ```
 
-A vault capsule is a verified reference, not compressed data: the agent that unpacks it needs the same vault. To share one, point both sides at it with `PROMPT_CAPSULE_VAULT=/shared/team.db`, or pass `vault=` (a path or any backend below) to `pack` and `unpack`.
+A vault capsule is a verified reference to the stored text: the agent that unpacks it needs the same vault. To share one, point both sides at it with `PROMPT_CAPSULE_VAULT=/shared/team.db`, or pass `vault=` (a path or any backend below) to `pack` and `unpack`.
 
 ## What's in a capsule
 
@@ -37,13 +41,13 @@ A vault capsule is a verified reference, not compressed data: the agent that unp
 | Inline | ≤ 500 bytes (UTF-8) | `cap_i_<checksum8>_<zlib+base85>` | The whole prompt, self-contained |
 | Vault | > 500 bytes | `cap_v_<checksum8>_<key>` | A random key; the prompt stays in the vault |
 
-Inline capsules are about packaging, not shrinking: very short prompts get *longer* (42 bytes become 78 characters). The size win is vault mode, where any prompt becomes a 41-character capsule.
+Capsules are a packaging format, not a way to make prompts smaller: an inline capsule is usually a little longer than the prompt it carries, and the model always sees the full, unchanged text.
 
 **The format is frozen.** [SPEC.md](https://github.com/UdayaNirogi/promptcapsule/blob/main/SPEC.md) defines it byte for byte, and every capsule produced since 0.1.0 will decode in every future release. CI enforces this with fixed test vectors.
 
 ## Signed capsules (authenticity)
 
-The 8-hex checksum detects corruption, but anyone can compute it. To know a capsule came from someone holding a shared secret, sign it with HMAC-SHA256:
+The 8-hex checksum detects corruption, but anyone can compute it. To check that a capsule was made by someone holding a shared secret key, sign it with HMAC-SHA256:
 
 ```python
 from promptcapsule import SignatureError
@@ -59,9 +63,23 @@ except SignatureError:
 - **Receivers must pass the key.** When `verify_signature` is a key (or `True`), unsigned capsules — including ones with the `_sig_…` suffix stripped — are rejected before anything is decompressed or fetched from a vault. Without a key, unsigned capsules are accepted.
 - `sign=True` / `verify_signature=True` read the key from `PROMPT_CAPSULE_HMAC_KEY`. Empty keys are rejected.
 - The signature is a 128-bit truncated HMAC-SHA256 over the prompt text, compared in constant time.
-- Signing proves who created the prompt, not when: a valid capsule can be replayed.
+- A valid signature proves only that the signer holds the shared key. It does not identify which key holder signed, and it does not prove when: a signed capsule can be replayed.
 
 For metadata, use the class API: `PromptCapsule().decompress(capsule, ...)` returns a result with `.text`, `.verified` (checksum only) and `.signed` (`True` only when a signature was checked against the key).
+
+## When to use it
+
+- **Handing an exact prompt between agents, processes or services** through a channel that should carry a short string: a queue message, a tool argument, a log line, a database column.
+- **You need to know the text arrived unchanged**, and optionally that it came from a holder of a shared key.
+- **Referring to long prompts** from tickets, configs or commits without pasting them in.
+
+## When not to use it
+
+- **To cut tokens or cost.** PromptCapsule never shortens or rewrites what the model reads; use a prompt-optimization tool for that.
+- **To keep prompts secret.** Capsules and vaults are not encrypted.
+- **When the receiver can't reach your vault.** Long-prompt capsules need a vault both sides can read; otherwise send the text itself.
+- **For identity, access control or replay protection.** Add those in your application.
+- **For general file archiving.** Use gzip or zstd.
 
 ## Command line
 
@@ -118,7 +136,7 @@ All exceptions derive from `PromptCapsuleError`:
 
 ## Security model
 
-**Provides:** exact reconstruction; tamper and corruption detection; optional authenticity with a shared secret; bounded decompression.
+**Provides:** exact reconstruction; tamper and corruption detection; optional authenticity with a shared secret key; zip-bomb protection (decoding is size-capped).
 
 **Does not provide:**
 
@@ -127,15 +145,6 @@ All exceptions derive from `PromptCapsuleError`:
 - **Replay protection.** Add your own nonce or expiry if you need it.
 
 See [TRUST.md](https://github.com/UdayaNirogi/promptcapsule/blob/main/TRUST.md) for the full threat model.
-
-## How it compares
-
-| Tool | Approach | Trade-off |
-|------|----------|-----------|
-| LLMLingua | Lossy semantic compression | Smaller prompts, but not exact |
-| LangChain Hub | Hosted prompt registry | Tied to the LangChain ecosystem |
-| zlib directly | General compression | No integrity, no vault, no signing |
-| **PromptCapsule** | Lossless capsule + pluggable vault | Needs a shared backend for long prompts |
 
 ## Development
 

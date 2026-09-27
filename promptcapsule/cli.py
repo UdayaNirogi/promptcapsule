@@ -229,7 +229,7 @@ def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         prog="promptcapsule",
-        description="PromptCapsule CLI - Lossless prompt packaging and retrieval",
+        description="PromptCapsule: pass the prompt, not the payload. Lossless prompt capsules with fail-closed integrity.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

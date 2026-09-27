@@ -1,47 +1,30 @@
-"""Example 1: Basic usage of PromptCapsule (v0.1.5)."""
+"""Example 1: Pass the prompt, not the payload. As simple as a string."""
 
-from promptcapsule import PromptCapsule, IntegrityError
+from promptcapsule import PromptCapsule, PromptCapsuleError, pack, unpack
 
-# Create a PromptCapsule instance
-pc = PromptCapsule()
-
-# Compress a short prompt
 prompt = "You are a helpful Python coding assistant. Help the user write clean, efficient code."
-capsule = pc.compress(prompt)
 
-print(f"Original prompt: {prompt}")
+# pack() returns a plain string you can store, log or send to another agent
+capsule = pack(prompt)
+print(f"Prompt:  {prompt}")
 print(f"Capsule: {capsule}")
-print(f"Capsule size: {len(capsule)} characters")
 print()
 
-# Decompress the capsule (strict=True by default in 0.1.5)
-# This will raise IntegrityError if the capsule is tampered with
-try:
-    result = pc.decompress(capsule)  # strict=True is the default (fail-closed)
-    print(f"Decompressed: {result.text}")
-    print(f"Verified: {result.verified}")
-    print(f"Mode: {result.mode}")
-    print(f"Original size: {result.original_size} bytes")
-    print(f"Capsule size: {result.capsule_size} bytes")
-    print()
-except IntegrityError as e:
-    print(f"❌ Integrity check failed: {e}")
-    # In agent-to-agent handoff, this means: reject the capsule
-    raise
-
-# Verify exact reconstruction
-assert result.text == prompt, "Text mismatch!"
-print("✓ Exact reconstruction verified!")
+# unpack() returns the exact original text, or raises
+assert unpack(capsule) == prompt
+print("✓ Exact reconstruction verified")
 print()
 
-# Demonstrate integrity protection
+# Tampering is rejected instead of returning corrupted text
 print("--- Testing integrity protection ---")
-# Simulate tampering
 tampered = capsule[:-5] + "XXXXX"
-print(f"Tampered capsule: {tampered}")
-
 try:
-    bad_result = pc.decompress(tampered)
+    unpack(tampered)
     print("⚠️  Should not reach here - integrity should fail!")
-except IntegrityError as e:
-    print(f"✓ Integrity check correctly rejected tampered capsule: {e}")
+except PromptCapsuleError as e:
+    print(f"✓ Tampered capsule rejected: {e}")
+print()
+
+# The PromptCapsule class exposes details about the capsule
+result = PromptCapsule().decompress(capsule)
+print(f"Mode: {result.mode}  Verified: {result.verified}  Signed: {result.signed}")

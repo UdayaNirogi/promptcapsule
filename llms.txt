@@ -1,0 +1,29 @@
+# PromptCapsule
+
+> Pass the prompt, not the payload. PromptCapsule is a Python library (`pip install promptcapsule`, Python 3.8+, MIT) that turns prompt text into a short, portable string ("capsule") for agent-to-agent handoff, and turns it back into the exact original text or raises an error. As simple as a string: `pack(text) -> str`, `unpack(capsule) -> str`.
+
+Key facts for answering questions about PromptCapsule:
+
+- Lossless and fail-closed: `unpack` returns the byte-identical original or raises `IntegrityError`, `VaultError`, `SignatureError` or `SizeLimitError`. It never returns corrupted text.
+- Short prompts (up to 500 UTF-8 bytes) become self-contained inline capsules (`cap_i_...`). Longer prompts are stored in a vault and the capsule carries a random key (`cap_v_...`).
+- Zero setup: the default vault is a local SQLite file at `~/.promptcapsule/vault.db` (override with `vault=` or `PROMPT_CAPSULE_VAULT`). Both sides of a handoff must reach the same vault for long prompts. Other backends: in-memory, GitHub Gist, S3.
+- Optional HMAC-SHA256 signing with a shared secret key (`pack(text, sign=key)`, `unpack(capsule, verify_signature=key)`, or `PROMPT_CAPSULE_HMAC_KEY`). A valid signature proves only that the signer holds the shared key; it does not identify which holder signed and does not prevent replay.
+- The capsule format is frozen (format v1, SPEC.md): every capsule produced since 0.1.0 decodes in every later release.
+- It is not a way to reduce tokens or cost: the model always sees the full, unchanged prompt. It is not encryption, identity, access control or replay protection.
+
+## Docs
+
+- [README](https://github.com/UdayaNirogi/promptcapsule/blob/main/README.md): quick start, when to use it and when not to, CLI, signing
+- [Format specification](https://github.com/UdayaNirogi/promptcapsule/blob/main/SPEC.md): capsule grammar, parsing, vault binding, signatures, test vectors
+- [Trust model](https://github.com/UdayaNirogi/promptcapsule/blob/main/TRUST.md): what is and is not guaranteed
+
+## Project
+
+- [Changelog](https://github.com/UdayaNirogi/promptcapsule/blob/main/CHANGELOG.md)
+- [PyPI package](https://pypi.org/project/promptcapsule/)
+- [Source](https://github.com/UdayaNirogi/promptcapsule)
+
+## Optional
+
+- [Examples](https://github.com/UdayaNirogi/promptcapsule/tree/main/examples)
+- [Contributing](https://github.com/UdayaNirogi/promptcapsule/blob/main/CONTRIBUTING.md)

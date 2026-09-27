@@ -2,6 +2,15 @@
 
 All notable changes to PromptCapsule. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Documentation
+- Tagline: **Pass the prompt, not the payload.** README gains "When to use it" and "When not to use it" sections and no longer frames capsules as a way to make prompts smaller.
+- Signing is described accurately: a valid signature proves only that the signer holds the shared key.
+- PyPI metadata: new description and keywords (no "compression" or "retrieval"), plus Documentation, Source, Changelog, Specification, Issues and Discussions links.
+- Added `llms.txt`. Rewrote `docs/ABSTRACT.md` for 0.3.0 and updated `CONTRIBUTING.md` (current layout, ruff/black/isort, frozen-format rule).
+- Moved the 0.1.5 design document and review deck to `docs/internal/` and removed the outdated infographic.
+
 ## [0.3.0] - 2026-09-27
 
 Theme: **as simple as a string.**

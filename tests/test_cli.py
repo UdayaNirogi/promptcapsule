@@ -37,7 +37,7 @@ def test_cli_help():
     """Test --help flag."""
     result = run_cli("--help")
     assert result.returncode == 0
-    assert "PromptCapsule CLI" in result.stdout
+    assert "pass the prompt, not the payload" in result.stdout
     assert "pack" in result.stdout
     assert "unpack" in result.stdout
 
