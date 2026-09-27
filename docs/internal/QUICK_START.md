@@ -81,9 +81,9 @@ See `/examples/` directory:
 
 ## Documentation
 
-- 📖 [`README.md`](README.md) - Full documentation
+- 📖 [`README.md`](../../README.md) - Full documentation
 - 🧪 [`TEST_RESULTS.md`](TEST_RESULTS.md) - Test analysis
-- 🔧 [`CONTRIBUTING.md`](CONTRIBUTING.md) - Contributing guide
+- 🔧 [`CONTRIBUTING.md`](../../CONTRIBUTING.md) - Contributing guide
 - 🏗️ [`BUILD_SUMMARY.md`](BUILD_SUMMARY.md) - Build details
 - ✅ [`PROJECT_COMPLETION_REPORT.md`](PROJECT_COMPLETION_REPORT.md) - Final report
 
@@ -232,7 +232,7 @@ result = pc.decompress(capsule, vault_backend=vault)
 
 ## Support
 
-- 📖 [Full Documentation](README.md)
+- 📖 [Full Documentation](../../README.md)
 - 🐛 [Report Issues](https://github.com/UdayaNirogi/promptcapsule/issues)
 - 💬 [Discussions](https://github.com/UdayaNirogi/promptcapsule/discussions)
 

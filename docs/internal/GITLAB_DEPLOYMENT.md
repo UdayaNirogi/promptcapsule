@@ -224,8 +224,8 @@ For questions about GitLab:
 - [GitLab Help Center](https://about.gitlab.com/resources/)
 
 For questions about PromptCapsule:
-- See [README.md](README.md)
-- See [CONTRIBUTING.md](CONTRIBUTING.md)
+- See [README.md](../../README.md)
+- See [CONTRIBUTING.md](../../CONTRIBUTING.md)
 
 ---
 
