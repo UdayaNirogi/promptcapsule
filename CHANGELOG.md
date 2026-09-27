@@ -4,6 +4,12 @@ All notable changes to PromptCapsule. Versions follow [Semantic Versioning](http
 
 ## [Unreleased]
 
+### Fixed
+- `SQLiteBackend` no longer creates an empty database file when you read from a path that does not exist; it raises `KeyError` instead. The file is created on the first `store`.
+- `CapsuleResult.capsule_size` is now the length of the whole capsule string, including the `cap_` prefix, checksum and any `_sig_` suffix. It previously counted only the payload or vault key (for example 26 for a 41-character capsule).
+- CLI `verify` on a signed capsule with no key no longer prints "Signature verification FAILED". It checks integrity and warns that the signature was not checked; with `--require-signature` it fails with "Signature required but no key was given".
+- CLI `inspect` only reports a capsule as signed when it ends with a `_sig_` suffix, so a vault key containing `_sig_` is no longer reported as signed.
+
 ### Documentation
 - Tagline: **Pass the prompt, not the payload.** README gains "When to use it" and "When not to use it" sections and no longer frames capsules as a way to make prompts smaller.
 - Signing is described accurately: a valid signature proves only that the signer holds the shared key.

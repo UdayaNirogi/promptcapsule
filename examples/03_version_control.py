@@ -22,10 +22,10 @@ prompts_data = {
     },
 }
 
-# Compress all prompts and save their capsules to a JSON file
+# Pack all prompts and save their capsules to a JSON file
 prompts_config = {}
 
-print("Compressing and saving prompts...")
+print("Packing and saving prompts...")
 print("=" * 70)
 
 for prompt_name, versions in prompts_data.items():
@@ -104,5 +104,7 @@ index 1a2b3c4..5d6e7f8 100644
 
 # Cleanup
 os.remove(config_file)
-os.remove("prompts_vault.db")
+# The vault file only exists if a prompt was long enough to be stored in it
+if os.path.exists("prompts_vault.db"):
+    os.remove("prompts_vault.db")
 print("Cleaned up example files")

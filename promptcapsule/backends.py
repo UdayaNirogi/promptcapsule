@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import secrets
 import sqlite3
 from datetime import datetime, timezone
@@ -42,13 +43,19 @@ class InMemoryBackend(VaultBackend):
 
 
 class SQLiteBackend(VaultBackend):
-    """SQLite-based vault backend for local storage."""
+    """SQLite-based vault backend for local storage.
+
+    The database file is created on the first ``store``. Reading from a path that
+    does not exist raises ``KeyError`` and leaves the filesystem untouched.
+    """
 
     def __init__(self, db_path: str = "promptcapsule.db"):
         self.db_path = db_path
-        self._init_db()
+        self._initialized = False
 
     def _init_db(self):
+        if self._initialized:
+            return
         conn = sqlite3.connect(self.db_path)
         try:
             conn.execute(
@@ -65,17 +72,31 @@ class SQLiteBackend(VaultBackend):
             conn.commit()
         finally:
             conn.close()
+        self._initialized = True
 
     def close(self):
-        """Explicitly close any cached connections (Windows file locking fix)."""
-        # Force close all connections by connecting and immediately closing
+        """No-op: a connection is opened and closed for every operation."""
+
+    def _select(self, columns: str, key: str) -> tuple:
+        if not os.path.isfile(self.db_path):
+            raise KeyError(f"Key not found: {key} (vault database {self.db_path} does not exist)")
+        conn = sqlite3.connect(self.db_path)
         try:
-            conn = sqlite3.connect(self.db_path)
+            try:
+                cursor = conn.execute(f"SELECT {columns} FROM capsules WHERE key = ?", (key,))
+            except sqlite3.OperationalError as e:
+                if "no such table" in str(e):
+                    raise KeyError(f"Key not found: {key}") from e
+                raise
+            row = cursor.fetchone()
+            if row is None:
+                raise KeyError(f"Key not found: {key}")
+            return row
+        finally:
             conn.close()
-        except Exception:  # noqa: S110, BLE001
-            pass  # Best-effort cleanup, failures are acceptable
 
     def store(self, text: str, checksum: str) -> str:
+        self._init_db()
         # Rare collision retry
         for _ in range(8):
             key = _new_vault_key("sql")
@@ -95,32 +116,11 @@ class SQLiteBackend(VaultBackend):
         raise RuntimeError("Failed to generate unique vault key")
 
     def retrieve(self, key: str) -> str:
-        conn = sqlite3.connect(self.db_path)
-        try:
-            cursor = conn.execute(
-                "SELECT text FROM capsules WHERE key = ?",
-                (key,),
-            )
-            row = cursor.fetchone()
-            if row is None:
-                raise KeyError(f"Key not found: {key}")
-            return row[0]
-        finally:
-            conn.close()
+        return self._select("text", key)[0]
 
     def retrieve_with_checksum(self, key: str) -> tuple:
-        conn = sqlite3.connect(self.db_path)
-        try:
-            cursor = conn.execute(
-                "SELECT text, checksum FROM capsules WHERE key = ?",
-                (key,),
-            )
-            row = cursor.fetchone()
-            if row is None:
-                raise KeyError(f"Key not found: {key}")
-            return row[0], row[1]
-        finally:
-            conn.close()
+        text, checksum = self._select("text, checksum", key)
+        return text, checksum
 
 
 class GitHubGistBackend(VaultBackend):

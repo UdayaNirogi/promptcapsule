@@ -115,6 +115,31 @@ class TestSQLiteBackend:
 
             assert backend.retrieve(key) == large_content
 
+    def test_reading_missing_database_creates_nothing(self, tmp_path):
+        db_path = tmp_path / "missing.db"
+        backend = SQLiteBackend(str(db_path))
+        with pytest.raises(KeyError):
+            backend.retrieve("sql_nope")
+        with pytest.raises(KeyError):
+            backend.retrieve_with_checksum("sql_nope")
+        backend.close()
+        assert not db_path.exists()
+
+    def test_database_created_on_first_store(self, tmp_path):
+        db_path = tmp_path / "new.db"
+        backend = SQLiteBackend(str(db_path))
+        assert not db_path.exists()
+        key = backend.store("content", "checksum")
+        assert db_path.is_file()
+        assert backend.retrieve_with_checksum(key) == ("content", "checksum")
+
+    def test_empty_database_file_raises_key_error(self, tmp_path):
+        db_path = tmp_path / "empty.db"
+        db_path.touch()
+        with pytest.raises(KeyError):
+            SQLiteBackend(str(db_path)).retrieve("sql_nope")
+        assert db_path.stat().st_size == 0
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--tb=short"])

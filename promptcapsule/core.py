@@ -34,8 +34,8 @@ class CapsuleResult(NamedTuple):
     verified: bool
     mode: str  # "inline" or "vault"
     checksum: str
-    original_size: int
-    capsule_size: int
+    original_size: int  # UTF-8 bytes of the text
+    capsule_size: int  # characters in the whole capsule string, including any _sig_ suffix
     signed: bool = False
 
 
@@ -169,6 +169,7 @@ class PromptCapsule:
         if len(capsule.encode("utf-8")) > self.MAX_PROMPT_SIZE:
             raise SizeLimitError("Capsule exceeds maximum allowed size")
 
+        capsule_size = len(capsule)
         has_signature = _SIG_SUFFIX.search(capsule) is not None
         # A caller that supplies a key must never accept an unsigned capsule,
         # otherwise stripping the signature bypasses verification entirely.
@@ -195,6 +196,7 @@ class PromptCapsule:
             result = self._decompress_vault(capsule_data, vault_backend)
         else:
             raise FormatError("Unknown capsule type")
+        result = result._replace(capsule_size=capsule_size)
 
         if sig_key is not None:
             computed_sig_short = IntegrityChecker.create_signature(result.text, sig_key)[:32]

@@ -2,11 +2,15 @@
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
 from promptcapsule import IntegrityError, PromptCapsule, SignatureError, __version__
+from promptcapsule.core import _SIG_SUFFIX
 from promptcapsule.simple import pack, resolve_vault
+
+_NO_KEY_HINT = "pass --key-file PATH or set the PROMPT_CAPSULE_HMAC_KEY environment variable"
 
 
 def _read_text(path):
@@ -155,7 +159,7 @@ def inspect_command(args):
             "capsule": capsule[:50] + "..." if len(capsule) > 50 else capsule,
             "mode": mode,
             "checksum_prefix": checksum_prefix,
-            "signed": "_sig_" in capsule,
+            "signed": _SIG_SUFFIX.search(capsule) is not None,
             "capsule_length": len(capsule),
         }
 
@@ -187,14 +191,27 @@ def verify_command(args):
     try:
         vault_backend = _vault_for(capsule, args.vault)
         verify = _signing_key(args, args.require_signature)
+        have_key = isinstance(verify, str) or bool(os.environ.get("PROMPT_CAPSULE_HMAC_KEY"))
+        if verify is True and not have_key:
+            print(f"[FAIL] Signature required but no key was given: {_NO_KEY_HINT}")
+            return 1
+        is_signed = _SIG_SUFFIX.search(capsule) is not None
+        signature_unchecked = is_signed and not have_key
         result = pc.decompress(
-            capsule, vault_backend=vault_backend, strict=True, verify_signature=verify
+            capsule,
+            vault_backend=vault_backend,
+            strict=True,
+            verify_signature=False if signature_unchecked else verify,
         )
 
         if result.verified:
             print("[PASS] Integrity verification PASSED")
             if result.signed:
                 print("[PASS] Signature verification PASSED")
+            elif signature_unchecked:
+                print(
+                    f"[WARN] Signed, but no key was given, so the signature was NOT checked: {_NO_KEY_HINT}"
+                )
             else:
                 print("[INFO] Not signed: authenticity was not checked")
             if args.verbose:

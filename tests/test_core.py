@@ -189,6 +189,18 @@ class TestCompressionEfficiency:
         assert len(result.checksum) == 64  # SHA256 is 64 hex chars
         assert result.verified is True
 
+    def test_capsule_size_is_full_capsule_length(self):
+        inline = self.pc.compress("hello")
+        assert self.pc.decompress(inline).capsule_size == len(inline)
+
+        backend = InMemoryBackend()
+        vault = self.pc.compress("x" * 600, vault_backend=backend)
+        assert self.pc.decompress(vault, vault_backend=backend).capsule_size == len(vault)
+
+        signed = self.pc.compress("hello", sign="k")
+        assert self.pc.decompress(signed, verify_signature="k").capsule_size == len(signed)
+        assert self.pc.decompress(signed, verify_signature=False).capsule_size == len(signed)
+
 
 class TestInterleavedOperations:
     """Test multiple compress/decompress operations."""

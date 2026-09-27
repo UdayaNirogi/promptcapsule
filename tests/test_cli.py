@@ -301,6 +301,40 @@ class TestCLISigning:
         assert "verify" in result.stderr
         assert "Signing requested" not in result.stderr
 
+    def test_verify_signed_capsule_without_key_does_not_say_failed(self):
+        capsule = run_cli("pack", "--text", "hello", "--sign", hmac_key="k").stdout.strip()
+        result = run_cli("verify", "--capsule", capsule)
+        assert result.returncode == 0
+        assert "FAILED" not in result.stdout
+        assert "Integrity verification PASSED" in result.stdout
+        assert "signature was NOT checked" in result.stdout
+        assert "Signature verification PASSED" not in result.stdout
+
+    def test_verify_signed_capsule_without_key_still_checks_integrity(self):
+        capsule = run_cli("pack", "--text", "hello", "--sign", hmac_key="k").stdout.strip()
+        body, sig = capsule.rsplit("_sig_", 1)
+        tampered = body[:-3] + ("AAA" if body[-3:] != "AAA" else "BBB") + "_sig_" + sig
+        result = run_cli("verify", "--capsule", tampered)
+        assert result.returncode == 1
+        assert "Signature verification" not in result.stdout
+
+    def test_verify_require_signature_without_key_explains_missing_key(self):
+        capsule = run_cli("pack", "--text", "hello", "--sign", hmac_key="k").stdout.strip()
+        result = run_cli("verify", "--capsule", capsule, "--require-signature")
+        assert result.returncode == 1
+        assert "no key was given" in result.stdout
+        assert "Signature verification FAILED" not in result.stdout
+
+    def test_verify_signed_capsule_with_env_key(self):
+        capsule = run_cli("pack", "--text", "hello", "--sign", hmac_key="k").stdout.strip()
+        result = run_cli("verify", "--capsule", capsule, hmac_key="k")
+        assert result.returncode == 0
+        assert "Signature verification PASSED" in result.stdout
+
+    def test_inspect_vault_key_containing_sig_is_not_signed(self):
+        capsule = "cap_v_0123abcd_k_sig_x"
+        assert "Signed: no" in run_cli("inspect", "--capsule", capsule).stdout
+
 
 def test_long_prompt_uses_default_vault(isolated_default_vault):
     long_text = "x" * 600
