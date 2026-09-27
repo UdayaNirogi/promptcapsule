@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from promptcapsule import IntegrityError, PromptCapsule, SignatureError, __version__
-from promptcapsule.backends import SQLiteBackend
+from promptcapsule.simple import pack, resolve_vault
 
 
 def _read_text(path):
@@ -25,13 +25,11 @@ def _write_text(path, text):
         Path(path).write_bytes(text.encode("utf-8"))
 
 
-def _existing_vault(path):
-    """Open a vault for reading; never create a database file as a side effect."""
-    if not path:
+def _vault_for(capsule, path):
+    """Vault needed to open this capsule; never creates a database file."""
+    if not capsule.startswith("cap_v_"):
         return None
-    if not Path(path).is_file():
-        raise FileNotFoundError(f"Vault database not found: {path}")
-    return SQLiteBackend(path)
+    return resolve_vault(path, create=False)
 
 
 def _read_capsule(args):
@@ -52,8 +50,6 @@ def _signing_key(args, flag):
 
 def pack_command(args):
     """Pack a prompt into a capsule."""
-    pc = PromptCapsule()
-
     if args.file:
         text = _read_text(args.file)
     elif args.text:
@@ -62,11 +58,9 @@ def pack_command(args):
         print("Error: Either --file or --text required", file=sys.stderr)
         return 1
 
-    vault_backend = SQLiteBackend(args.vault) if args.vault else None
-
     try:
         sign = _signing_key(args, args.sign)
-        capsule = pc.compress(text, vault_backend=vault_backend, sign=sign)
+        capsule = pack(text, sign=sign, vault=args.vault)
 
         if args.output:
             Path(args.output).write_text(capsule, encoding="utf-8")
@@ -98,7 +92,7 @@ def unpack_command(args):
         return 1
 
     try:
-        vault_backend = _existing_vault(args.vault)
+        vault_backend = _vault_for(capsule, args.vault)
         verify = _signing_key(args, args.require_signature)
         result = pc.decompress(
             capsule,
@@ -191,7 +185,7 @@ def verify_command(args):
         return 1
 
     try:
-        vault_backend = _existing_vault(args.vault)
+        vault_backend = _vault_for(capsule, args.vault)
         verify = _signing_key(args, args.require_signature)
         result = pc.decompress(
             capsule, vault_backend=vault_backend, strict=True, verify_signature=verify
@@ -245,7 +239,7 @@ Examples:
   # Pack from stdin
   echo "You are a helpful assistant" | promptcapsule pack --file -
 
-  # Pack with vault storage
+  # Long prompts go to ~/.promptcapsule/vault.db ($PROMPT_CAPSULE_VAULT), or pick one
   promptcapsule pack --file long_prompt.txt --vault prompts.db
 
   # Sign with the key in PROMPT_CAPSULE_HMAC_KEY (or use --key-file PATH)
@@ -273,7 +267,11 @@ shell history or process listings.
     pack_parser.add_argument("--file", "-f", help="Input file (use - for stdin)")
     pack_parser.add_argument("--text", "-t", help="Input text directly")
     pack_parser.add_argument("--output", "-o", help="Output file (default: stdout)")
-    pack_parser.add_argument("--vault", "-v", help="Vault database path (for long prompts)")
+    pack_parser.add_argument(
+        "--vault",
+        "-v",
+        help="SQLite vault path (default: ~/.promptcapsule/vault.db or $PROMPT_CAPSULE_VAULT)",
+    )
     pack_parser.add_argument(
         "--sign",
         action="store_true",
@@ -286,7 +284,11 @@ shell history or process listings.
     unpack_parser.add_argument("--file", "-f", help="Capsule file (use - for stdin)")
     unpack_parser.add_argument("--capsule", "-c", help="Capsule string directly")
     unpack_parser.add_argument("--output", "-o", help="Output file (default: stdout)")
-    unpack_parser.add_argument("--vault", "-v", help="Vault database path (for vault capsules)")
+    unpack_parser.add_argument(
+        "--vault",
+        "-v",
+        help="SQLite vault path (default: ~/.promptcapsule/vault.db or $PROMPT_CAPSULE_VAULT)",
+    )
     unpack_parser.add_argument(
         "--require-signature",
         action="store_true",
@@ -306,7 +308,11 @@ shell history or process listings.
     verify_parser = subparsers.add_parser("verify", help="Verify capsule integrity")
     verify_parser.add_argument("--file", "-f", help="Capsule file (use - for stdin)")
     verify_parser.add_argument("--capsule", "-c", help="Capsule string directly")
-    verify_parser.add_argument("--vault", "-v", help="Vault database path (for vault capsules)")
+    verify_parser.add_argument(
+        "--vault",
+        "-v",
+        help="SQLite vault path (default: ~/.promptcapsule/vault.db or $PROMPT_CAPSULE_VAULT)",
+    )
     verify_parser.add_argument(
         "--require-signature",
         action="store_true",

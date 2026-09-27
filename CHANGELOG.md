@@ -2,6 +2,21 @@
 
 All notable changes to PromptCapsule. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+Theme: **as simple as a string.**
+
+### Added
+- `pack(text) -> str` and `unpack(capsule) -> str` at the top level of the package.
+- Zero-setup storage: long prompts go to a local SQLite vault at `~/.promptcapsule/vault.db` (or `$PROMPT_CAPSULE_VAULT`), created on first use with owner-only permissions. `unpack` never creates a missing vault. The CLI uses the same default, so `--vault` is optional.
+- `SPEC.md`: the capsule format, frozen as version 1. Every capsule produced since 0.1.0 decodes in every future release; `tests/test_format_v1.py` enforces this with fixed test vectors, including capsules from past releases.
+
+### Fixed
+- A capsule is signed only if it *ends* with `_sig_` plus 32 lowercase hex characters. Previously `_sig_` anywhere (for example inside a vault key) was treated as a signature and the capsule failed to open.
+
+### Changed
+- Removed an unreachable zlib code path whose recompression check would have tied decoding to the encoder's zlib settings. Decoding is now documented as purely structural.
+
 ## [0.2.1.1] - 2026-09-27
 
 ### Changed

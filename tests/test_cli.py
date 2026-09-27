@@ -302,6 +302,14 @@ class TestCLISigning:
         assert "Signing requested" not in result.stderr
 
 
+def test_long_prompt_uses_default_vault(isolated_default_vault):
+    long_text = "x" * 600
+    capsule = run_cli("pack", "--text", long_text).stdout.strip()
+    assert capsule.startswith("cap_v_")
+    assert isolated_default_vault.is_file()
+    assert run_cli("unpack", "--capsule", capsule).stdout == long_text
+
+
 class TestCLIMissingVault:
     @pytest.mark.parametrize("command", ["unpack", "verify"])
     def test_missing_vault_is_not_created(self, tmp_path, command):

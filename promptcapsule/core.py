@@ -40,6 +40,8 @@ class CapsuleResult(NamedTuple):
 
 
 _HEX8 = re.compile(r"^[0-9a-f]{8}$")
+# A capsule is signed if and only if it ends with this suffix (see SPEC.md).
+_SIG_SUFFIX = re.compile(r"_sig_([0-9a-f]{32})\Z")
 
 
 @dataclass
@@ -167,7 +169,7 @@ class PromptCapsule:
         if len(capsule.encode("utf-8")) > self.MAX_PROMPT_SIZE:
             raise SizeLimitError("Capsule exceeds maximum allowed size")
 
-        has_signature = "_sig_" in capsule
+        has_signature = _SIG_SUFFIX.search(capsule) is not None
         # A caller that supplies a key must never accept an unsigned capsule,
         # otherwise stripping the signature bypasses verification entirely.
         signature_required = verify_signature is not None and verify_signature is not False
@@ -228,31 +230,15 @@ class PromptCapsule:
     def _safe_zlib_decompress(self, compressed: bytes) -> bytes:
         """Decompress with an expansion cap (zip-bomb guard) and trailing junk rejection.
 
-        Security hardening (F13 residual):
         - Rejects zlib streams with trailing unused bytes
         - Ensures complete decompression (EOF reached)
         - Blocks malleability via concatenated or partial streams
 
-        ``zlib.decompress(..., max_length=)`` exists only on Python 3.11+.
-        Older versions use ``decompressobj`` with the same limit.
+        Validity is structural only: any complete zlib stream is accepted regardless
+        of the compression level or zlib implementation that produced it (SPEC.md).
         """
         max_length = self.MAX_DECOMPRESSED_SIZE
 
-        # Python 3.11+ path: simpler but need manual trailing check
-        try:
-            decompressed = zlib.decompress(compressed, max_length=max_length)
-            # Verify no trailing junk: re-compress and check exact match
-            recompressed = zlib.compress(decompressed, level=self.COMPRESSION_LEVEL)
-            if recompressed != compressed:
-                raise FormatError("zlib stream has trailing junk or non-canonical compression")
-            return decompressed
-        except TypeError:
-            # Python < 3.11: use decompressobj for granular control
-            pass
-        except zlib.error as e:
-            raise FormatError(f"zlib decompress failed: {e}") from e
-
-        # Python < 3.11 path: decompressobj with EOF verification
         deco = zlib.decompressobj()
         try:
             out = deco.decompress(compressed, max_length)
@@ -435,22 +421,10 @@ class PromptCapsule:
         Raises:
             FormatError: If signature format is invalid
         """
-        if "_sig_" not in capsule:
-            raise FormatError("Capsule does not contain signature")
-
-        parts = capsule.rsplit("_sig_", 1)
-        if len(parts) != 2:
-            raise FormatError("Invalid signature format")
-
-        unsigned, signature = parts
-
-        # Validate signature format (32 hex chars = 16 bytes)
-        if len(signature) != 32 or not all(c in "0123456789abcdef" for c in signature):
-            raise FormatError(
-                f"Invalid signature format: expected 32 hex chars, got {len(signature)}"
-            )
-
-        return unsigned, signature
+        match = _SIG_SUFFIX.search(capsule)
+        if match is None:
+            raise FormatError("Capsule does not end with a signature (_sig_ + 32 hex chars)")
+        return capsule[: match.start()], match.group(1)
 
 
 class VaultBackend:

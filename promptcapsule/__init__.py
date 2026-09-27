@@ -11,6 +11,7 @@ from .exceptions import (
     VaultError,
 )
 from .integrity import IntegrityChecker
+from .simple import default_vault_path, pack, unpack
 
 __version__ = "0.2.1.1"
 __author__ = "Udaya Nirogi"
@@ -31,4 +32,8 @@ __all__ = [
     "SignatureError",
     "SizeLimitError",
     "VaultError",
+    # Two-function API
+    "default_vault_path",
+    "pack",
+    "unpack",
 ]

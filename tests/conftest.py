@@ -6,6 +6,14 @@ import tempfile
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def isolated_default_vault(tmp_path, monkeypatch):
+    """Never let tests touch the real ~/.promptcapsule vault (CLI subprocesses inherit this)."""
+    path = tmp_path / "default-vault" / "vault.db"
+    monkeypatch.setenv("PROMPT_CAPSULE_VAULT", str(path))
+    return path
+
+
 @pytest.fixture
 def temp_db():
     """Fixture providing a temporary SQLite database path."""
