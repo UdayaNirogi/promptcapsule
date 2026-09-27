@@ -2,7 +2,10 @@
 
 All notable changes to PromptCapsule. Versions follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.1.1] - 2026-09-27
+
+### Changed
+- `CapsuleResult` has a new last field, `signed`. Code that reads fields by name is unaffected; code that unpacks the result positionally into six variables must add a seventh.
 
 ### Added
 - `CapsuleResult.signed`: `True` only when an HMAC signature was present and verified with a key. `verified` still covers the checksum only, so a signature-stripped capsule opened without a key now visibly reports `signed=False`.

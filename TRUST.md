@@ -1,6 +1,6 @@
 # PromptCapsule — Trust & Threat Model
 
-**Version:** 0.2.1  
+**Version:** 0.2.1.1  
 **Last Updated:** 2026-09-24  
 **Status:** Living document
 
@@ -422,6 +422,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 - [x] `DeprecationWarning` on `strict=False` usage
 - [x] Optional HMAC-SHA256 signed capsules, constant-time verification (v0.2.0)
 - [x] Key supplied → signature required; empty keys rejected (v0.2.1)
+- [x] `result.signed` reports authenticity separately from `result.verified` (v0.2.1.1)
 
 ### 🔲 Application-Level Mitigations (Required)
 
@@ -473,6 +474,7 @@ Contributors who report valid security issues will be credited here (with permis
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.2.1.1 | 2026-09-27 | `CapsuleResult.signed` separates authenticity from integrity |
 | 0.2.1 | 2026-09-26 | Signature required when a key is supplied; empty keys rejected |
 | 0.2.0 | 2026-09-26 | Optional HMAC-SHA256 signed capsules |
 | 0.1.5 | 2026-09-24 | Initial TRUST.md; documents all current guarantees/limitations |
