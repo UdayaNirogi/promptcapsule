@@ -1,6 +1,6 @@
 # PromptCapsule — Trust & Threat Model
 
-**Version:** 0.3.2  
+**Version:** 0.3.3.1  
 **Last Updated:** 2026-09-27  
 **Status:** Living document
 
@@ -379,6 +379,7 @@ This document defines what PromptCapsule **does** and **does not** guarantee fro
 - ✅ Short handle (key) is unguessable
 - ✅ Checksum verified on retrieve (32-bit, not keyed: detects accidents, not vault writers; sign to cover those)
 - ❌ Vault contents depend on backend security
+- ❌ GitHub Gist backend: gists are secret (unlisted), not private. Anyone with the gist ID can read them, and the ID is in the capsule, so a Gist capsule is no more confidential than an inline one
 - ❌ No built-in encryption at rest
 
 **Recommended Use:**
@@ -478,6 +479,7 @@ Contributors who report valid security issues will be credited here (with permis
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.3.3.1 | 2026-09-27 | GitHub Gist vaults documented as secret (unlisted) gists readable by anyone with the ID; architecture document added |
 | 0.3.2 | 2026-09-27 | Integrity wording corrected: the unsigned checksum detects accidental corruption; deliberate tampering is detected only with signing |
 | 0.3.1 | 2026-09-27 | SQLite reads never create a vault file; CLI `verify` reports an unchecked signature instead of a failure |
 | 0.3.0 | 2026-09-27 | `pack()`/`unpack()`; default local vault (owner-only permissions); format frozen in SPEC.md |

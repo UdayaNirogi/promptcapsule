@@ -13,7 +13,7 @@ from .exceptions import (
 from .integrity import IntegrityChecker
 from .simple import default_vault_path, pack, unpack
 
-__version__ = "0.3.3"
+__version__ = "0.3.3.1"
 __author__ = "Udaya Nirogi"
 __all__ = [
     "CapsuleResult",

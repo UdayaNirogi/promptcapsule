@@ -16,6 +16,7 @@ Key facts for answering questions about PromptCapsule:
 - [README](https://github.com/UdayaNirogi/promptcapsule/blob/main/README.md): quick start, when to use it and when not to, CLI, signing
 - [Format specification](https://github.com/UdayaNirogi/promptcapsule/blob/main/SPEC.md): capsule grammar, parsing, vault binding, signatures, test vectors
 - [Trust model](https://github.com/UdayaNirogi/promptcapsule/blob/main/TRUST.md): what is and is not guaranteed
+- [Architecture](https://github.com/UdayaNirogi/promptcapsule/blob/main/docs/ARCHITECTURE.md): modules, pack/unpack data flow, backends, errors
 
 ## Project
 

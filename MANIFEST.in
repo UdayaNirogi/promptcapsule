@@ -1,4 +1,5 @@
 include README.md LICENSE CHANGELOG.md SPEC.md TRUST.md CONTRIBUTING.md llms.txt
+include docs/ABSTRACT.md docs/ARCHITECTURE.md
 graft tests
 graft examples
 global-exclude __pycache__ *.py[cod] .DS_Store *.db

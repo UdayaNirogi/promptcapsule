@@ -11,7 +11,7 @@ pip install promptcapsule            # core: zero dependencies
 pip install "promptcapsule[vault]"   # adds S3 and GitHub Gist backends
 ```
 
-Python 3.8–3.13 · MIT · 200+ tests on Linux, macOS and Windows · [Frozen format spec](https://github.com/UdayaNirogi/promptcapsule/blob/main/SPEC.md) · [Changelog](https://github.com/UdayaNirogi/promptcapsule/blob/main/CHANGELOG.md)
+Python 3.8–3.13 · MIT · 200+ tests on Linux, macOS and Windows · [Frozen format spec](https://github.com/UdayaNirogi/promptcapsule/blob/main/SPEC.md) · [Architecture](https://github.com/UdayaNirogi/promptcapsule/blob/main/docs/ARCHITECTURE.md) · [Changelog](https://github.com/UdayaNirogi/promptcapsule/blob/main/CHANGELOG.md)
 
 ## Quick start
 
@@ -103,7 +103,7 @@ Keys are never accepted as command-line arguments, so they don't appear in proce
 |---------|--------|-------|
 | In-memory | `InMemoryBackend()` | Tests and prototypes |
 | SQLite | `SQLiteBackend("prompts.db")` | Local file, no dependencies; the default vault |
-| GitHub Gist | `GitHubGistBackend(token=...)` | Private gists; by default, retrieval requires the gist to belong to the token's user |
+| GitHub Gist | `GitHubGistBackend(token=...)` | Secret (unlisted) gists: readable by anyone with the gist ID, which is in the capsule. By default, retrieval requires the gist to belong to the token's user |
 | AWS S3 | `S3Backend(bucket=..., region=...)` | Keys confined to the configured prefix |
 
 All live in `promptcapsule.backends`. Both agents must reach the same backend. Vault keys are random (`secrets.token_urlsafe`), and the capsule checksum is bound to the stored content, so swapping keys between capsules fails verification. The binding is 32 bits and isn't keyed, so it doesn't stop someone who can write to the vault; use signing for that.
@@ -142,7 +142,7 @@ All exceptions derive from `PromptCapsuleError`:
 
 - **Tamper resistance for unsigned capsules.** Anyone can recompute the checksum. Sign capsules and verify with the key.
 - **Encryption.** Anyone holding an inline capsule, or with access to the vault, can read the prompt.
-- **Identity or access control.** Protect your vault with its own ACLs (IAM, private gists, file permissions).
+- **Identity or access control.** Protect your vault with its own ACLs (IAM, file permissions). GitHub secret gists have no access control: anyone with the ID can read them.
 - **Replay protection.** Add your own nonce or expiry if you need it.
 
 See [TRUST.md](https://github.com/UdayaNirogi/promptcapsule/blob/main/TRUST.md) for the full threat model.

@@ -160,18 +160,19 @@ def example_github_gist_backend():
     - Cloud-based persistent storage
     - Version control friendly approach
     - Accessible from multiple machines
-    - Built-in GitHub privacy controls
     
     ✅ Pros:
        - Cloud-based (accessible anywhere)
        - GitHub provides version history
-       - Private gists by default
+       - Secret (unlisted) gists by default: not listed publicly, but
+         readable by anyone with the gist ID, which is in the capsule
        - Free tier available
        - Good for sharing with teams
     
     ❌ Cons:
        - Requires GitHub account and token
-       - API rate limits (60 requests/hour for unauthenticated)
+       - API rate limits
+       - Not confidential: anyone holding a capsule can read the gist
        - Network latency
        - GitHub terms of service compliance
        - Token security concerns
@@ -181,7 +182,8 @@ def example_github_gist_backend():
     - Use GitHub environment secrets in CI/CD
     - Rotate tokens regularly
     - Use fine-grained personal access tokens with minimal scopes
-    - Ensure gists are set to private
+    - Do not store sensitive prompts: secret gists are readable by anyone
+      with the ID
     - Audit GitHub token usage regularly
     
     Setup Instructions:
@@ -226,9 +228,9 @@ def example_github_gist_backend():
     
     print("Example code structure:")
     print("  1. Initialize backend with GitHub token")
-    print("  2. Compress prompts (creates private gists)")
+    print("  2. Pack prompts (creates secret gists, readable by anyone with the ID)")
     print("  3. Keys are GitHub gist IDs")
-    print("  4. Decompress prompts (retrieves from gists)")
+    print("  4. Unpack prompts (retrieves from gists)")
     print("  5. GitHub provides version history automatically")
     print()
 
@@ -419,8 +421,8 @@ def print_security_recommendations():
     ✓ Implement exponential backoff for API calls
     ✓ Monitor gist activity via GitHub API
     ✓ Consider GitHub Advanced Security for audit logging
-    ⚠️  Gists are accessible to anyone with the URL (even if private)
-    ⚠️  Use GitHub's private gists as defense-in-depth, not sole security
+    ⚠️  Secret gists are readable by anyone with the gist ID or URL, and the
+       ID is in the capsule: anyone holding a capsule can read the prompt
     
     ☁️  AWS S3 BACKEND
     ──────────────────────────────────────────────────────────────────

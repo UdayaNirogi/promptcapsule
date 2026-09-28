@@ -2,6 +2,14 @@
 
 All notable changes to PromptCapsule. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.3.3.1] - 2026-09-27
+
+Documentation update. No code changes; the capsule format is unchanged.
+
+### Documentation
+- Added `docs/ARCHITECTURE.md`: modules, pack and unpack data flow, capsule types, vault backends, checksum versus signing, errors and limits, written from the code.
+- GitHub Gist vaults are no longer described as "private gists". The backend creates secret (unlisted) gists, which anyone with the gist ID can read, and the ID is in the capsule. README, TRUST.md and example 05 now say so.
+
 ## [0.3.3] - 2026-09-27
 
 Packaging fix. No code behaviour changes; the capsule format is unchanged.
